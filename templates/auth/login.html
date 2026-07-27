@@ -2,10 +2,10 @@
 
 {% block content %}
 <style>
-    /* Fondo limpio que mantiene la legibilidad */
+    /* Fondo limpio que mantiene la legibilidad (Estilo Original Claro) */
     body {
-        background-color: var(--brand-bg) !important;
-        background-image: linear-gradient(135deg, var(--brand-bg) 0%, #eef3f5 100%);
+        background-color: #F8F9FA !important;
+        background-image: linear-gradient(135deg, #F8F9FA 0%, #eef3f5 100%) !important;
     }
 
     /* Opcional: Ocultar la barra solo en login */
@@ -17,26 +17,26 @@
 <div class="row align-items-center justify-content-evenly" style="min-height: 85vh;">
     <!-- Columna Izquierda: Cuadro de Acceso Segregado -->
     <div class="col-md-6 col-lg-5 mb-4">
-        <div class="card card-custom p-5 border-0 shadow-lg rounded-4" style="background-color: white; border-top: 5px solid var(--brand-blue) !important;">
+        <div class="card p-5 border-0 shadow-lg rounded-4" style="background-color: #FFFFFF; border-top: 5px solid var(--brand-red) !important;">
             <div class="text-center mb-5">
-                <h3 class="fw-bold text-brand-black">Acceso al Panel</h3>
+                <h3 class="fw-bold" style="color: #000000;">Acceso al Panel</h3>
                 <p class="text-muted">Introduce tus credenciales operativas</p>
             </div>
             
             <form method="POST" action="/auth/login">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="mb-4">
-                    <label class="form-label fw-bold text-brand-black">Correo Electrónico</label>
-                    <input type="email" class="form-control form-control-lg bg-light border-0" name="email" required placeholder="tu@cases.com">
+                    <label class="form-label fw-bold" style="color: #000000;">Correo Electrónico</label>
+                    <input type="email" class="form-control form-control-lg border-0 shadow-sm" style="background-color: #f8f9fa; color: #000000;" name="email" required placeholder="tu@koba.com">
                 </div>
                 
                 <div class="mb-5">
-                    <label class="form-label fw-bold text-brand-black">Contraseña</label>
-                    <input type="password" class="form-control form-control-lg bg-light border-0" name="password" required placeholder="••••••••">
+                    <label class="form-label fw-bold" style="color: #000000;">Contraseña</label>
+                    <input type="password" class="form-control form-control-lg border-0 shadow-sm" style="background-color: #f8f9fa; color: #000000;" name="password" required placeholder="••••••••">
                 </div>
                 
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-blue btn-lg rounded-pill shadow-sm">
+                    <button type="submit" class="btn btn-lg rounded-pill shadow-sm fw-bold" style="background-color: #000000; color: #FFFFFF;">
                         Ingresar <i class="fa-solid fa-arrow-right ms-2"></i>
                     </button>
                 </div>
@@ -47,7 +47,7 @@
     <!-- Columna Derecha: Logo Central y Limpio -->
     <div class="col-md-6 col-lg-6 d-none d-md-flex justify-content-center align-items-center text-center">
         <!-- Logo a la altura del usuario sin solapamiento -->
-        <img src="{{ url_for('static', filename='img/cases.png') }}" alt="Identidad Visual cases.com" class="img-fluid" style="max-height: 380px; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.1));">
+        <img src="{{ url_for('static', filename='img/KOBA.png') }}" alt="Identidad Visual KOBA" class="img-fluid" style="max-height: 380px; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.2));">
     </div>
 </div>
 {% endblock %}

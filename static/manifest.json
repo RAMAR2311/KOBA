@@ -1,11 +1,11 @@
 {
-    "name": "Cases App",
-    "short_name": "Cases",
-    "description": "Sistema de gestión y punto de venta web",
+    "name": "KOBA",
+    "short_name": "KOBA",
+    "description": "Sistema de gestión y punto de venta web KOBA",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#F9C8D3",
+    "background_color": "#121212",
+    "theme_color": "#008B8B",
     "icons": [
         {
             "src": "/static/img/icons/icon-192x192.png",

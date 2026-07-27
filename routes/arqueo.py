@@ -33,80 +33,6 @@ def calcular_totales_dia(ventas_del_dia):
     
     return total_efectivo, total_transferencia
 
-def procesar_unidades_ch(ventas):
-    desglose = []
-    total_general_ch = Decimal('0')
-    
-    for v in ventas:
-        for detalle in v.detalles:
-            nombre = ""
-            if detalle.producto:
-                nombre = detalle.producto.nombre
-            elif detalle.nombre_manual:
-                nombre = detalle.nombre_manual
-                
-            subcategoria = ""
-            if detalle.variante:
-                subcategoria = detalle.variante.nombre_variante
-            
-            # Buscar el patrón 'CH', opcionalmente con espacio y/o 'x', seguido de un número
-            match_nombre = re.search(r'CH\s*x?(\d+)', nombre, re.IGNORECASE)
-            match_sub = re.search(r'CH\s*x?(\d+)', subcategoria, re.IGNORECASE)
-            
-            valor_extraido = None
-            error_formato = False
-            
-            # Prioridad: nombre del producto
-            if match_nombre:
-                try:
-                    valor_extraido = int(match_nombre.group(1))
-                except ValueError:
-                    error_formato = True
-            elif match_sub:
-                try:
-                    valor_extraido = int(match_sub.group(1))
-                except ValueError:
-                    error_formato = True
-            else:
-                # Si se detecta 'CH' pero no hay un número válido después
-                if re.search(r'CH', nombre, re.IGNORECASE) or re.search(r'CH', subcategoria, re.IGNORECASE):
-                    error_formato = True
-            
-            if valor_extraido is not None:
-                valor_unitario = valor_extraido * 1000
-                cantidad = detalle.cantidad_vendida
-                subtotal = Decimal(str(valor_unitario * cantidad))
-                
-                desglose.append({
-                    'nombre': f"{nombre} ({subcategoria})" if subcategoria else nombre,
-                    'cantidad': cantidad,
-                    'valor_unitario': valor_unitario,
-                    'subtotal': subtotal,
-                    'error': False
-                })
-                total_general_ch += subtotal
-            elif error_formato:
-                desglose.append({
-                    'nombre': f"{nombre} ({subcategoria})" if subcategoria else nombre,
-                    'cantidad': detalle.cantidad_vendida,
-                    'valor_unitario': 0,
-                    'subtotal': Decimal('0'),
-                    'error': 'Error de formato en descripción'
-                })
-                
-    return desglose, total_general_ch
-
-def procesar_celulares(ventas):
-    total_celulares = Decimal('0')
-    for v in ventas:
-        for detalle in v.detalles:
-            if detalle.producto and detalle.producto.tipo_inventario == 'celulares':
-                if detalle.variant_id and detalle.variante:
-                    costo = detalle.variante.precio_costo or 0
-                else:
-                    costo = detalle.producto.precio_costo or 0
-                total_celulares += Decimal(str(costo * detalle.cantidad_vendida))
-    return total_celulares
 
 @arqueo_bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
@@ -121,8 +47,7 @@ def nuevo():
 
     # Calcular ventas del día usando el sistema híbrido (SalePayment + legacy)
     ventas_del_dia = Sale.query.filter(
-        db.func.date(Sale.fecha_venta) == fecha_seleccionada,
-        Sale.tipo_venta == 'general'
+        db.func.date(Sale.fecha_venta) == fecha_seleccionada
     ).all()
     total_efectivo, total_transferencia = calcular_totales_dia(ventas_del_dia)
 
@@ -140,12 +65,12 @@ def nuevo():
     ).all()
     gastos_externos = float(sum(g.monto for g in gastos_externos_registros))
 
-    # Verificar si ya existe un arqueo GLOBAL para esa fecha (unificado para todos los usuarios)
-    arqueo_existente = ArqueoCaja.query.filter_by(fecha_arqueo=fecha_seleccionada, tipo_arqueo='general').first()
+    # Verificar si ya existe un arqueo para esa fecha
+    arqueo_existente = ArqueoCaja.query.filter_by(fecha_arqueo=fecha_seleccionada).first()
 
     if request.method == 'POST':
         # Doble verificación en el backend para evitar duplicados por concurrencia
-        if ArqueoCaja.query.filter_by(fecha_arqueo=fecha_seleccionada, tipo_arqueo='general').first():
+        if ArqueoCaja.query.filter_by(fecha_arqueo=fecha_seleccionada).first():
             flash('Ya existe un arqueo cerrado para esta fecha. No se puede duplicar.', 'warning')
             return redirect(url_for('arqueo_bp.reporte', fecha_inicio=fecha_str, fecha_fin=fecha_str))
 
@@ -168,9 +93,7 @@ def nuevo():
             observaciones_gastos=observaciones_gastos,
             total_efectivo_sistema=total_efectivo,
             total_transferencia_sistema=total_transferencia,
-            total_unidades_ch=procesar_unidades_ch(ventas_del_dia)[1],
-            total_celulares=Decimal('0.00'), # Ya no aplica al general
-            tipo_arqueo='general'
+            total_unidades_ch=procesar_unidades_ch(ventas_del_dia)[1]
         )
 
         try:
@@ -189,9 +112,7 @@ def nuevo():
         total_transferencia=total_transferencia,
         arqueo_existente=arqueo_existente,
         gastos_automaticos=gastos_automaticos,
-        gastos_externos=gastos_externos,
-        total_general_ch=procesar_unidades_ch(ventas_del_dia)[1],
-        total_celulares=Decimal('0.00')
+        gastos_externos=gastos_externos
     )
 
 @arqueo_bp.route('/reporte', methods=['GET'])
@@ -218,8 +139,7 @@ def reporte():
     # Arqueo unificado: todos los usuarios ven los mismos arqueos (ya no se filtra por vendedor)
     query = ArqueoCaja.query.filter(
         ArqueoCaja.fecha_arqueo >= fecha_inicio,
-        ArqueoCaja.fecha_arqueo <= fecha_fin,
-        ArqueoCaja.tipo_arqueo == 'general'
+        ArqueoCaja.fecha_arqueo <= fecha_fin
     )
 
     arqueos = query.order_by(ArqueoCaja.fecha_arqueo.desc()).all()
@@ -232,8 +152,6 @@ def reporte():
         'total_gastos': sum(a.gastos_del_dia for a in arqueos)
     }
     
-    resumen['total_unidades_ch'] = sum(a.total_unidades_ch for a in arqueos)
-    resumen['total_celulares'] = sum(a.total_celulares for a in arqueos)
     
     # Calcular los gastos por productos externos en este rango de fechas
     gastos_externos_query = Expense.query.filter(
@@ -244,8 +162,8 @@ def reporte():
     resumen['total_gastos_externos'] = sum(g.monto for g in gastos_externos_query)
     
     resumen['total_recaudado_bruto'] = resumen['total_efectivo'] + resumen['total_transferencia']
-    # Restar Unidades CH, Celulares y TOTAL DE GASTOS de la venta neta (Los gastos externos ya están incluidos en total_gastos si se registran como Gasto Diario)
-    resumen['total_recaudado_neto'] = resumen['total_recaudado_bruto'] - resumen['total_unidades_ch'] - resumen['total_celulares'] - resumen['total_gastos']
+    # Restar Celulares y TOTAL DE GASTOS de la venta neta (Los gastos externos ya están incluidos en total_gastos si se registran como Gasto Diario)
+    resumen['total_recaudado_neto'] = resumen['total_recaudado_bruto'] - resumen['total_gastos']
     
     # Calcular los gastos que fueron pagados en EFECTIVO
     gastos_efectivo_query = Expense.query.filter(
@@ -256,22 +174,20 @@ def reporte():
     ).all()
     resumen['total_gastos_efectivo'] = sum(g.monto for g in gastos_efectivo_query)
 
-    # El efectivo esperado en caja descuenta gastos en EFECTIVO, celulares y CH
-    resumen['efectivo_esperado'] = (resumen['total_base'] + resumen['total_efectivo']) - resumen['total_gastos_efectivo'] - resumen['total_unidades_ch'] - resumen['total_celulares']
+    # El efectivo esperado en caja descuenta gastos en EFECTIVO y celulares
+    resumen['efectivo_esperado'] = (resumen['total_base'] + resumen['total_efectivo']) - resumen['total_gastos_efectivo']
 
     # Obtener todas las ventas del periodo para el detalle en la "tirilla" (unificado)
     ventas_query = Sale.query.filter(
         db.func.date(Sale.fecha_venta) >= fecha_inicio,
-        db.func.date(Sale.fecha_venta) <= fecha_fin,
-        Sale.tipo_venta == 'general'
+        db.func.date(Sale.fecha_venta) <= fecha_fin
     )
     
     ventas_periodo = ventas_query.order_by(Sale.fecha_venta.asc()).all()
 
     fecha_generacion = obtener_hora_bogota().strftime('%Y-%m-%d %H:%M')
 
-    # Procesar lógica de unidades CH
-    desglose_ch, total_general_ch = procesar_unidades_ch(ventas_periodo)
+
     
     # Obtener todos los gastos del periodo para el reporte detallado
     gastos_periodo = Expense.query.filter(
@@ -287,7 +203,5 @@ def reporte():
         fecha_fin=fecha_fin_str,
         fecha_generacion=fecha_generacion,
         ventas_periodo=ventas_periodo,
-        desglose_ch=desglose_ch,
-        total_general_ch=total_general_ch,
         gastos_periodo=gastos_periodo
     )

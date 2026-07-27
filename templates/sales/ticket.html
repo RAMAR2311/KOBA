@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket de Compra #{{ venta.id }} - cases.com</title>
+    <title>Ticket de Compra #{{ venta.id }} - redcover.com</title>
     <!-- Incluir solo la fuente base "Roboto Mono" (Letra de ticketera 80mm) -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -80,8 +80,9 @@
             justify-content: space-between;
             font-size: 1.4rem;
             font-weight: 700;
-            /* Branding Inyectado: Resalte estricto en Azul Turquesa (#A3D8DE) */
-            background-color: #A3D8DE;
+            /* Branding Inyectado: Resalte estricto en Teal Koba (#008B8B) */
+            background-color: #008B8B;
+            color: #FFFFFF;
             padding: 12px 15px;
             border-radius: 6px;
             border: 1px solid #1A1A1A;
@@ -97,9 +98,9 @@
             display: block;
             width: 100%;
             padding: 15px;
-            background-color: #1A1A1A;
+            background-color: #008B8B; /* Teal Koba */
             color: #FFFFFF;
-            border: 2px solid #1A1A1A;
+            border: 2px solid #008B8B;
             font-size: 1.1rem;
             border-radius: 6px;
             font-weight: bold;
@@ -111,7 +112,7 @@
 
         .btn-print:hover {
             background-color: #FFFFFF;
-            color: #1A1A1A;
+            color: #008B8B;
         }
 
         /* MEDIA QUERY DE IMPRESIÓN RIGUROSA: Las reglas CSS aquí omiten UI inútil al imprimir en papel */
@@ -128,7 +129,7 @@
 
 <div class="ticket">
     <div class="header">
-        <h1 class="logo">cases.com</h1>
+        <h1 class="logo">redcover.com</h1>
         <p class="info">Folio / Ticket: #{{ venta.id }}</p>
         <p class="info">Expedido: {{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</p>
         <p class="info">Cajero Asignado: {{ venta.vendedor.nombre }}</p>
@@ -201,7 +202,7 @@
     <div class="footer">
         <p style="font-size: 1rem; font-weight: bold;">¡Gracias por tu compra!</p>
         <p>Políticas de Tienda: Devoluciones únicamente presentando ticket impreso o digital.</p>
-        <p>Soporte: ventas@cases.com</p>
+        <p>Soporte: ventas@redcover.com</p>
     </div>
 
     <button class="btn-print" onclick="window.print()">

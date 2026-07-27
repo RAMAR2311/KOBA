@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, MetaData, text
 # CONFIGURACIÓN
 # Cambia 'postgres:password' por tus credenciales locales de postgres reales si difieren
 SQLITE_URL = "sqlite:///instance/crm_inventory.db" 
-POSTGRES_URL = os.environ.get('DATABASE_URL', "postgresql://postgres:admin123@localhost:5432/crm_cases")
+POSTGRES_URL = os.environ.get('DATABASE_URL', "postgresql://postgres:admin123@localhost:5432/KOBA")
 
 print("="*60)
 print("🚀 SCRIPT ARQUITECTÓNICO DE MIGRACIÓN: SQLite -> PostgreSQL")

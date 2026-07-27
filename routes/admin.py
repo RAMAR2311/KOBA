@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, abort, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariant, Sale, User, Maneo, SaleDetail, SalePayment, StockAdjustment, Expense, obtener_hora_bogota
+from models import db, Product, ProductVariant, Sale, User, Maneo, SaleDetail, SalePayment, StockAdjustment, Expense, ArqueoCaja, obtener_hora_bogota
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash
 from decorators import admin_required
 from decimal import Decimal
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin_bp', __name__)
 
@@ -76,22 +77,44 @@ def dashboard():
     productos_bajo_stock = Product.query.filter(Product.cantidad_stock <= 10).count()
     maneos_activos = Maneo.query.filter_by(estado='PENDIENTE').count()
     
-    # Se filtran las ventas de la quincena actual (del 1 al 15 o del 16 al fin de mes)
+    # Se filtran las ventas por el mes/año seleccionado o el actual por defecto
     hoy = obtener_hora_bogota()
-    if hoy.day <= 15:
-        inicio_quincena = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    else:
-        inicio_quincena = hoy.replace(day=16, hour=0, minute=0, second=0, microsecond=0)
     
-    total_ventas = db.session.query(func.sum(Sale.monto_total)).filter(Sale.fecha_venta >= inicio_quincena).scalar() or 0.0
-    conteo_ventas = Sale.query.filter(Sale.fecha_venta >= inicio_quincena).count()
+    # Leer parámetros de la solicitud
+    try:
+        mes = int(request.args.get('mes', hoy.month))
+        anio = int(request.args.get('anio', hoy.year))
+    except ValueError:
+        mes = hoy.month
+        anio = hoy.year
+        
+    from datetime import datetime
+    import calendar
+    
+    # Definir el rango del mes
+    inicio_mes = datetime(anio, mes, 1, 0, 0, 0)
+    ultimo_dia = calendar.monthrange(anio, mes)[1]
+    fin_mes = datetime(anio, mes, ultimo_dia, 23, 59, 59)
+    
+    total_ventas = db.session.query(func.sum(Sale.monto_total)).filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes).scalar() or 0.0
+    conteo_ventas = Sale.query.filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes).count()
+
+    meses = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+    }
+    nombre_mes = meses.get(mes, 'Mes Actual')
 
     return render_template('admin/dashboard.html', 
                            total_productos=total_productos,
                            productos_bajo_stock=productos_bajo_stock,
                            total_ventas=total_ventas,
                            conteo_ventas=conteo_ventas,
-                           maneos_activos=maneos_activos)
+                           maneos_activos=maneos_activos,
+                           mes=mes,
+                           anio=anio,
+                           nombre_mes=nombre_mes)
 
 @admin_bp.route('/maneos')
 @login_required
@@ -110,6 +133,7 @@ def maneos_prestar():
     cantidad = int(request.form.get('cantidad', 0))
     local_vecino = request.form.get('local_vecino')
     variant_id_str = request.form.get('variant_id')
+    valor_fijo_str = request.form.get('valor_fijo')
 
     if not sku:
         flash('Asegúrate de escanear o ingresar un SKU válido.', 'danger')
@@ -137,6 +161,11 @@ def maneos_prestar():
             return redirect(url_for('admin_bp.maneos'))
 
     try:
+        valor_fijo = float(valor_fijo_str) if valor_fijo_str and valor_fijo_str.strip() else None
+    except ValueError:
+        valor_fijo = None
+
+    try:
         # Descontar stock de la variante o del producto base
         if variante:
             stock_anterior = variante.cantidad_stock
@@ -150,6 +179,7 @@ def maneos_prestar():
             variant_id=variante.id if variante else None,
             local_vecino=local_vecino.strip(),
             cantidad=cantidad,
+            valor_fijo=valor_fijo,
             estado='PENDIENTE'
         )
         db.session.add(nuevo_maneo)
@@ -424,3 +454,96 @@ def balance_financiero():
         fecha_generacion=hoy.strftime('%Y-%m-%d %H:%M'),
         datos=datos_financieros
     )
+
+@admin_bp.route('/arqueo', methods=['GET'])
+@login_required
+@admin_required
+def arqueo_caja():
+    # Retrieve today's date in Bogota
+    hoy = obtener_hora_bogota().date()
+    
+    # Check if box is already closed today
+    arqueo_hoy = ArqueoCaja.query.filter(db.func.date(ArqueoCaja.fecha_arqueo) == hoy).first()
+    caja_cerrada = arqueo_hoy is not None
+
+    # Calculate today's sales
+    from datetime import datetime, timedelta
+    inicio_dia = datetime.combine(hoy, datetime.min.time())
+    fin_dia = inicio_dia + timedelta(days=1)
+    
+    ventas = Sale.query.filter(Sale.fecha_venta >= inicio_dia, Sale.fecha_venta < fin_dia).order_by(Sale.fecha_venta.desc()).all()
+    
+    total_efectivo = 0.0
+    total_digital = 0.0
+    for venta in ventas:
+        for pago in venta.pagos:
+            if pago.metodo_pago.lower() == 'efectivo':
+                total_efectivo += float(pago.monto)
+            else:
+                total_digital += float(pago.monto)
+                
+    # Calculate today's expenses
+    gastos = Expense.query.filter(Expense.fecha_gasto >= inicio_dia, Expense.fecha_gasto < fin_dia).all()
+    total_gastos = sum(float(g.monto) for g in gastos)
+    
+    return render_template(
+        'admin/arqueo.html',
+        ventas=ventas,
+        total_efectivo=total_efectivo,
+        total_digital=total_digital,
+        total_gastos=total_gastos,
+        caja_cerrada=caja_cerrada,
+        arqueo=arqueo_hoy
+    )
+
+@admin_bp.route('/arqueo/cerrar', methods=['POST'])
+@login_required
+@admin_required
+def cierre_caja():
+    hoy = obtener_hora_bogota().date()
+    
+    # Prevent double closing
+    if ArqueoCaja.query.filter(db.func.date(ArqueoCaja.fecha_arqueo) == hoy).first():
+        flash('La caja ya fue cerrada el día de hoy.', 'warning')
+        return redirect(url_for('admin_bp.arqueo_caja'))
+
+    base_inicial = request.form.get('base_inicial', 0)
+    gastos_dia = request.form.get('gastos_dia', 0)
+    efectivo_fisico = request.form.get('efectivo_fisico', 0)
+    observaciones_diferencia = request.form.get('observaciones_diferencia', '')
+
+    # Re-calculate totals
+    inicio_dia = datetime.combine(hoy, datetime.min.time())
+    fin_dia = inicio_dia + timedelta(days=1)
+    
+    ventas = Sale.query.filter(Sale.fecha_venta >= inicio_dia, Sale.fecha_venta < fin_dia).all()
+    total_efectivo = 0.0
+    total_digital = 0.0
+    for venta in ventas:
+        for pago in venta.pagos:
+            if pago.metodo_pago.lower() == 'efectivo':
+                total_efectivo += float(pago.monto)
+            else:
+                total_digital += float(pago.monto)
+
+    # Save to DB
+    nuevo_arqueo = ArqueoCaja(
+        vendedor_id=current_user.id,
+        fecha_arqueo=hoy,
+        base_inicial=float(base_inicial),
+        gastos_del_dia=float(gastos_dia),
+        total_efectivo_sistema=total_efectivo,
+        total_transferencia_sistema=total_digital,
+        efectivo_fisico_contado=float(efectivo_fisico),
+        observaciones_diferencia=observaciones_diferencia.strip()
+    )
+    
+    try:
+        db.session.add(nuevo_arqueo)
+        db.session.commit()
+        flash('Caja cerrada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cerrar la caja: {str(e)}', 'danger')
+
+    return redirect(url_for('admin_bp.arqueo_caja'))

@@ -46,11 +46,6 @@ class Product(db.Model):
     observacion = db.Column(db.Text, nullable=True) # Nota descriptiva
     fecha_creacion = db.Column(db.DateTime, default=obtener_hora_bogota)
     
-    # Campos específicos para módulo de celulares (tipo_inventario='celulares')
-    imei = db.Column(db.String(50), unique=True, nullable=True, index=True)
-    marca = db.Column(db.String(100), nullable=True)
-    modelo_celular = db.Column(db.String(100), nullable=True)
-    estado_celular = db.Column(db.String(50), nullable=True, default='Nuevo') # Nuevo, Usado
     
     detalles_venta = db.relationship('SaleDetail', backref='producto', lazy=True)
     ajustes_stock = db.relationship('StockAdjustment', backref='producto_rel', lazy=True)
@@ -128,11 +123,11 @@ class Sale(db.Model):
     fecha_venta = db.Column(db.DateTime, default=obtener_hora_bogota)
     monto_total = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     metodo_pago = db.Column(db.String(50), nullable=False, default='efectivo')
-    tipo_venta = db.Column(db.String(50), nullable=False, server_default='general') # 'general' o 'celulares'
+
     
     detalles = db.relationship('SaleDetail', backref='venta', lazy=True, cascade="all, delete-orphan")
     pagos = db.relationship('SalePayment', backref='venta', lazy=True, cascade="all, delete-orphan")
-    cliente = db.relationship('SaleClient', backref='venta', lazy=True, cascade="all, delete-orphan", uselist=False)
+
 
     def __init__(self, **kwargs):
         super(Sale, self).__init__(**kwargs)
@@ -163,20 +158,7 @@ class SalePayment(db.Model):
     def __init__(self, **kwargs):
         super(SalePayment, self).__init__(**kwargs)
 
-class SaleClient(db.Model):
-    """Modelo para almacenar los datos del cliente, especialmente requerido en ventas de celulares."""
-    __tablename__ = 'sale_clients'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=False, unique=True)
-    nombre = db.Column(db.String(150), nullable=False)
-    documento = db.Column(db.String(50), nullable=False, index=True)
-    telefono = db.Column(db.String(50), nullable=False)
-    
-    # Relación configurada desde Sale
 
-    def __init__(self, **kwargs):
-        super(SaleClient, self).__init__(**kwargs)
 
 class SaleDetail(db.Model):
     __tablename__ = 'sale_details'
@@ -216,14 +198,15 @@ class ArqueoCaja(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vendedor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fecha_arqueo = db.Column(db.Date, nullable=False)
-    tipo_arqueo = db.Column(db.String(50), nullable=False, server_default='general') # 'general' o 'celulares'
+
     base_inicial = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     gastos_del_dia = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     observaciones_gastos = db.Column(db.String(255), nullable=True)
     total_efectivo_sistema = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     total_transferencia_sistema = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
-    total_unidades_ch = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
-    total_celulares = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
+    efectivo_fisico_contado = db.Column(db.Numeric(10, 2), nullable=True)
+    observaciones_diferencia = db.Column(db.Text, nullable=True)
+
     fecha_creacion = db.Column(db.DateTime, default=obtener_hora_bogota)
 
     def __init__(self, **kwargs):
@@ -237,6 +220,7 @@ class Maneo(db.Model):
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=True)
     local_vecino = db.Column(db.String(150), nullable=False)
     cantidad = db.Column(db.Integer, nullable=False)
+    valor_fijo = db.Column(db.Numeric(10, 2), nullable=True) # Valor fijo asignado manualmente
     estado = db.Column(db.String(50), nullable=False, default='PENDIENTE') # PENDIENTE, FACTURADO, DEVUELTO
     fecha_prestamo = db.Column(db.DateTime, default=obtener_hora_bogota)
     fecha_resolucion = db.Column(db.DateTime, nullable=True)
@@ -364,3 +348,35 @@ class AbonoBodega(db.Model):
 
     def __init__(self, **kwargs):
         super(AbonoBodega, self).__init__(**kwargs)
+
+class Provider(db.Model):
+    __tablename__ = 'providers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(150), nullable=False)
+    empresa = db.Column(db.String(150), nullable=True)
+    telefono = db.Column(db.String(50), nullable=True)
+    fecha_creacion = db.Column(db.DateTime, default=obtener_hora_bogota)
+    
+    facturas = db.relationship('ProviderInvoice', backref='provider', cascade='all, delete-orphan', lazy=True)
+    pagos = db.relationship('ProviderPayment', backref='provider', cascade='all, delete-orphan', lazy=True)
+
+class ProviderInvoice(db.Model):
+    __tablename__ = 'provider_invoices'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    provider_id = db.Column(db.Integer, db.ForeignKey('providers.id'), nullable=False)
+    monto_total = db.Column(db.Numeric(10, 2), nullable=False)
+    numero_factura = db.Column(db.String(100), nullable=True)
+    descripcion = db.Column(db.String(255), nullable=True)
+    comprobante = db.Column(db.String(255), nullable=True)
+    fecha_factura = db.Column(db.DateTime, default=obtener_hora_bogota)
+
+class ProviderPayment(db.Model):
+    __tablename__ = 'provider_payments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    provider_id = db.Column(db.Integer, db.ForeignKey('providers.id'), nullable=False)
+    monto_abonado = db.Column(db.Numeric(10, 2), nullable=False)
+    observacion = db.Column(db.String(255), nullable=True)
+    fecha_pago = db.Column(db.DateTime, default=obtener_hora_bogota)

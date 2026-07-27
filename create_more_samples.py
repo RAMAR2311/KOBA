@@ -41,7 +41,7 @@ def create_more_sample_products():
         )
         db.session.add(adj1)
 
-        # 2. Product with variants (Cases)
+        # 2. Product with variants (Red Cover)
         prod2 = Product(
             sku=random_sku(),
             nombre="Funda de Silicona Premium iPhone",

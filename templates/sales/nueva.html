@@ -13,10 +13,10 @@
         <!-- Panel de Escaneo -->
         <div class="card card-custom p-4 mb-4">
             <label class="form-label fw-bold text-brand-black">Buscar o Escanear Código</label>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 position-relative">
                 <div class="input-group input-group-lg shadow-sm border-0 rounded-3 overflow-hidden flex-grow-1">
                     <span class="input-group-text bg-white border-0"><i class="fa-solid fa-barcode text-muted"></i></span>
-                    <input type="text" class="form-control border-0" id="sku_input" placeholder="Ingresa SKU exacto..." autofocus>
+                    <input type="text" class="form-control border-0" id="sku_input" placeholder="Buscar por nombre o SKU..." autocomplete="off" autofocus>
                     <!-- Botón Secundario Rosa Pastel -->
                     <button class="btn btn-pink px-4" type="button" id="btn_add_product">
                         <i class="fa-solid fa-check ms-1"></i> Agregar
@@ -25,6 +25,10 @@
                 <button class="btn btn-outline-primary rounded-3 px-3 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalProductoManual" title="Agregar producto de otro local">
                     <i class="fa-solid fa-plus me-1"></i><i class="fa-solid fa-handshake"></i>
                 </button>
+                
+                <!-- Resultados del autocompletado -->
+                <div id="autocomplete_results" class="list-group position-absolute shadow rounded-3 border-0" style="top: 100%; left: 0; right: 60px; z-index: 1050; display: none; max-height: 300px; overflow-y: auto;">
+                </div>
             </div>
         </div>
 
@@ -221,40 +225,6 @@
     </div>
 </div>
 
-<!-- Modal Datos del Cliente (Celulares) -->
-<div class="modal fade" id="modalClienteCelular" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-brand-blue text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-tag me-2"></i>Datos del Cliente</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-warning py-2 mb-4 border-0 small">
-                    <i class="fa-solid fa-triangle-exclamation me-1"></i> <strong>Venta de Celular Detectada:</strong> Es obligatorio registrar los datos del cliente para temas de garantía y soporte técnico.
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Nombre Completo</label>
-                    <input type="text" id="cliente_nombre" class="form-control bg-light" placeholder="Ej: Juan Pérez" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Cédula / Documento</label>
-                    <input type="text" id="cliente_documento" class="form-control bg-light" placeholder="Número de identificación" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Teléfono / WhatsApp</label>
-                    <input type="text" id="cliente_telefono" class="form-control bg-light" placeholder="Ej: 3001234567" required>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success rounded-pill fw-bold px-4" onclick="confirmarVentaCelular()">
-                    <i class="fa-solid fa-check me-1"></i> Confirmar Venta
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 <!-- Motor Javascript Vanilla para procesar Cajas Dinámicas sin recargar -->
 <script>
     let carrito = [];
@@ -493,6 +463,71 @@
 
         actualizarSaldoRestante();
     }
+
+    // --- Lógica de Autocompletado ---
+    const skuInputEl = document.getElementById('sku_input');
+    const autocompleteResultsEl = document.getElementById('autocomplete_results');
+    let autocompleteTimeout = null;
+
+    skuInputEl.addEventListener('input', function() {
+        clearTimeout(autocompleteTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            autocompleteResultsEl.style.display = 'none';
+            return;
+        }
+
+        autocompleteTimeout = setTimeout(() => {
+            fetch(`/sales/api/search_products?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    autocompleteResultsEl.innerHTML = '';
+                    if (data.length === 0) {
+                        autocompleteResultsEl.innerHTML = '<div class="list-group-item text-muted">No se encontraron productos.</div>';
+                        autocompleteResultsEl.style.display = 'block';
+                        return;
+                    }
+
+                    data.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                        
+                        let stockBadge = p.cantidad_stock > 0 
+                            ? `<span class="badge bg-success rounded-pill">${p.cantidad_stock}</span>` 
+                            : `<span class="badge bg-danger rounded-pill">0</span>`;
+
+                        btn.innerHTML = `
+                            <div>
+                                <div class="fw-bold">${p.nombre}</div>
+                                <small class="text-muted">${p.sku}</small>
+                            </div>
+                            ${stockBadge}
+                        `;
+                        
+                        btn.addEventListener('click', () => {
+                            skuInputEl.value = p.sku;
+                            autocompleteResultsEl.style.display = 'none';
+                            buscarYAgregarProducto(); // Autodisparar la búsqueda exacta
+                        });
+                        
+                        autocompleteResultsEl.appendChild(btn);
+                    });
+                    
+                    autocompleteResultsEl.style.display = 'block';
+                })
+                .catch(err => console.error("Error en autocompletado:", err));
+        }, 300);
+    });
+
+    // Ocultar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!skuInputEl.contains(e.target) && !autocompleteResultsEl.contains(e.target)) {
+            autocompleteResultsEl.style.display = 'none';
+        }
+    });
+    // ---------------------------------
 
     async function buscarYAgregarProducto() {
         const inputStr = document.getElementById('sku_input');
@@ -772,39 +807,9 @@
         if (carrito.length === 0) {
             return alert('Agregue un número de serie válido. El carrito está vacío.');
         }
-
-        const tieneCelular = carrito.some(item => item.tipo_inventario === 'celulares');
-        if (tieneCelular) {
-            // Mostrar modal de cliente
-            const modalCliente = new bootstrap.Modal(document.getElementById('modalClienteCelular'));
-            modalCliente.show();
-        } else {
-            // Procesar normal sin cliente
-            procesarPago(null);
-        }
+        // Procesar normal sin cliente
+        procesarPago(null);
     });
-
-    function confirmarVentaCelular() {
-        const nombre = document.getElementById('cliente_nombre').value.trim();
-        const doc = document.getElementById('cliente_documento').value.trim();
-        const tel = document.getElementById('cliente_telefono').value.trim();
-
-        if (!nombre || !doc || !tel) {
-            return alert('Por favor completa todos los datos del cliente.');
-        }
-
-        const datosCliente = {
-            nombre: nombre,
-            documento: doc,
-            telefono: tel
-        };
-
-        const modalEl = document.getElementById('modalClienteCelular');
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        modalInstance.hide();
-
-        procesarPago(datosCliente);
-    }
 
     // Evento Transaccional JSON de Salida
     async function procesarPago(datosCliente = null) {
@@ -884,7 +889,7 @@
                 
                 // Si el navegador tiene un bloqueador de ventanas emergentes muy agresivo:
                 if (!reciboWindow) {
-                    alert('⚠️ Chrome bloqueó la pestaña emergente del recibo. Por favor, permite las ventanas emergentes (pop-ups) para cases.com en la barra superior.');
+                    alert('⚠️ Chrome bloqueó la pestaña emergente del recibo. Por favor, permite las ventanas emergentes (pop-ups) para koba.com en la barra superior.');
                 }
                 
                 // Alerta nativa solicitada para feedback directo (Mantiene pausada la pantalla de la Caja)

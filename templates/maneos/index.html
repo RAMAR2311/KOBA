@@ -42,23 +42,23 @@
                 <table class="table table-hover align-middle m-0">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4">FECHA PRÉSTAMO</th>
+                            <th class="ps-4 text-center">CANTIDAD</th>
+                            <th class="text-center">VALOR</th>
                             <th>LOCAL VECINO</th>
-                            <th>PRODUCTO</th>
-                            <th class="text-center">CANTIDAD</th>
+                            <th>PRODUCTO (CÓDIGO)</th>
                             <th class="text-center pe-4">ACCIONES (RESOLVER)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for maneo in activos %}
                         <tr>
-                            <td class="ps-4 text-muted small">{{ maneo.fecha_prestamo.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="ps-4 text-center fw-bolder fs-5 text-brand-blue">{{ maneo.cantidad }}</td>
+                            <td class="text-center fw-bold text-success">${{ '{:,.0f}'.format(maneo.cantidad * (maneo.valor_fijo if maneo.valor_fijo else (maneo.variante.precio_sugerido if maneo.variante else maneo.producto.precio_sugerido))) }}</td>
                             <td class="fw-bold text-brand-black">{{ maneo.local_vecino }}</td>
                             <td>
-                                <div class="fw-bold">{{ maneo.producto.nombre }}</div>
+                                <div class="fw-bold">{{ maneo.producto.nombre }} {% if maneo.variante %}<span class="text-muted small">({{ maneo.variante.nombre_variante }})</span>{% endif %}</div>
                                 <div class="small text-muted">SKU: {{ maneo.producto.sku }}</div>
                             </td>
-                            <td class="text-center fw-bolder fs-5 text-brand-blue">{{ maneo.cantidad }}</td>
                             <td class="text-center pe-4">
                                 <div class="d-flex justify-content-center gap-2">
                                     <!-- Botón Facturar -->
@@ -97,7 +97,7 @@
                                                     </p>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold small text-muted">Precio Unitario de Venta ($)</label>
-                                                        <input type="number" step="0.01" name="precio_unidad" class="form-control" value="{{ maneo.variante.precio_sugerido if maneo.variante else maneo.producto.precio_sugerido }}" required>
+                                                        <input type="number" step="1" min="0" class="form-control" name="precio_unidad" value="{{ "%.0f"|format(maneo.valor_fijo) if maneo.valor_fijo else "%.0f"|format((maneo.variante.precio_sugerido if maneo.variante else maneo.producto.precio_sugerido)|float) }}" required>
                                                         <small class="text-muted d-block mt-1">Precio Mínimo permitido: ${{ "{:,.0f}".format(maneo.producto.precio_minimo) }}</small>
                                                     </div>
                                                     <div class="mb-3">
@@ -141,25 +141,26 @@
                 <table class="table table-hover align-middle m-0">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4">FECHA RESOLUCIÓN</th>
+                            <th class="ps-4 text-center">CANTIDAD</th>
+                            <th class="text-center">VALOR</th>
                             <th>LOCAL VECINO</th>
-                            <th>PRODUCTO</th>
-                            <th class="text-center">CANTIDAD</th>
+                            <th>PRODUCTO (CÓDIGO)</th>
                             <th class="text-center pe-4">ESTADO</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for maneo in historial %}
                         <tr>
-                            <td class="ps-4 text-muted small">{{ maneo.fecha_resolucion.strftime('%Y-%m-%d %H:%M') if maneo.fecha_resolucion else '-' }}</td>
+                            <td class="ps-4 text-center fw-bold">{{ maneo.cantidad }}</td>
+                            <td class="text-center fw-bold text-success">${{ '{:,.0f}'.format(maneo.cantidad * (maneo.valor_fijo if maneo.valor_fijo else (maneo.variante.precio_sugerido if maneo.variante else maneo.producto.precio_sugerido))) }}</td>
                             <td class="fw-bold text-brand-black">{{ maneo.local_vecino }}</td>
                             <td class="text-muted">
-                                {{ maneo.producto.nombre }}
+                                <div class="fw-bold text-brand-black">{{ maneo.producto.nombre }}</div>
                                 {% if maneo.variante %}
-                                    <div class="small text-muted fw-bold">Subcat: {{ maneo.variante.nombre_variante }}</div>
+                                    <div class="small text-muted">Subcat: {{ maneo.variante.nombre_variante }}</div>
                                 {% endif %}
+                                <div class="small text-muted">SKU: {{ maneo.producto.sku }}</div>
                             </td>
-                            <td class="text-center fw-bold">{{ maneo.cantidad }}</td>
                             <td class="text-center pe-4">
                                 {% if maneo.estado == 'FACTURADO' %}
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-2"><i class="fa-solid fa-check me-1"></i> Facturado</span>
@@ -196,10 +197,15 @@
                         <input type="text" name="local_vecino" class="form-control form-control-lg" placeholder="Ej: Celulares Don Pepe" required autofocus>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">SKU del Producto *</label>
-                        <div class="input-group">
-                            <input type="text" name="sku_busqueda" id="maneoSkuInput" class="form-control" placeholder="Escanea o digita el SKU" required>
-                            <button type="button" class="btn btn-outline-secondary" id="btnCheckSku"><i class="fa-solid fa-search"></i> Buscar</button>
+                        <label class="form-label fw-bold text-muted small">Buscar Producto *</label>
+                        <div class="position-relative">
+                            <div class="input-group">
+                                <input type="text" name="sku_busqueda" id="maneoSkuInput" class="form-control" placeholder="Escanea o busca por nombre..." required autocomplete="off">
+                                <button type="button" class="btn btn-outline-secondary" id="btnCheckSku"><i class="fa-solid fa-search"></i> Buscar</button>
+                            </div>
+                            <!-- Resultados del autocompletado -->
+                            <div id="maneo_autocomplete_results" class="list-group position-absolute shadow rounded-3 border-0" style="top: 100%; left: 0; right: 0; z-index: 1050; display: none; max-height: 200px; overflow-y: auto;">
+                            </div>
                         </div>
                         <small class="text-muted d-block mt-1" id="maneoSkuStatus"></small>
                     </div>
@@ -242,6 +248,70 @@
     const maneoSkuStatus = document.getElementById('maneoSkuStatus');
     const variantesManeoContainer = document.getElementById('variantesManeoContainer');
     const variantesManeoSelect = document.getElementById('variantesManeoSelect');
+    
+    // --- Lógica de Autocompletado Maneos ---
+    const maneoAutocompleteResults = document.getElementById('maneo_autocomplete_results');
+    let maneoAutocompleteTimeout = null;
+
+    maneoSkuInput.addEventListener('input', function() {
+        clearTimeout(maneoAutocompleteTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            maneoAutocompleteResults.style.display = 'none';
+            return;
+        }
+
+        maneoAutocompleteTimeout = setTimeout(() => {
+            fetch(`/sales/api/search_products?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    maneoAutocompleteResults.innerHTML = '';
+                    if (data.length === 0) {
+                        maneoAutocompleteResults.innerHTML = '<div class="list-group-item text-muted">No se encontraron productos.</div>';
+                        maneoAutocompleteResults.style.display = 'block';
+                        return;
+                    }
+
+                    data.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                        
+                        let stockBadge = p.cantidad_stock > 0 
+                            ? `<span class="badge bg-success rounded-pill">${p.cantidad_stock}</span>` 
+                            : `<span class="badge bg-danger rounded-pill">0</span>`;
+
+                        btn.innerHTML = `
+                            <div>
+                                <div class="fw-bold">${p.nombre}</div>
+                                <small class="text-muted">${p.sku}</small>
+                            </div>
+                            ${stockBadge}
+                        `;
+                        
+                        btn.addEventListener('click', () => {
+                            maneoSkuInput.value = p.sku;
+                            maneoAutocompleteResults.style.display = 'none';
+                            checkSku(); // Autodisparar la búsqueda exacta
+                        });
+                        
+                        maneoAutocompleteResults.appendChild(btn);
+                    });
+                    
+                    maneoAutocompleteResults.style.display = 'block';
+                })
+                .catch(err => console.error("Error en autocompletado de maneos:", err));
+        }, 300);
+    });
+
+    // Ocultar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!maneoSkuInput.contains(e.target) && !maneoAutocompleteResults.contains(e.target)) {
+            maneoAutocompleteResults.style.display = 'none';
+        }
+    });
+    // ---------------------------------
 
     function checkSku() {
         const sku = maneoSkuInput.value.trim();

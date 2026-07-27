@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cases-app-v1';
+const CACHE_NAME = 'koba-app-v1';
 const ASSETS_TO_CACHE = [
     '/',
     '/static/manifest.json',

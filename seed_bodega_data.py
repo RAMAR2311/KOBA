@@ -85,7 +85,7 @@ def seed_bodega():
                 "nombre_o_razon_social": "Inversiones Marlo Cali",
                 "documento_o_nit": "800.111.222-3",
                 "telefono": "3159998877",
-                "email": "marlo@casestech.com",
+                "email": "marlo@koba.com",
                 "direccion": "Av. Pasoancho # 50-10"
             }
         ]

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Cabecera -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-brand-black m-0">
+            <i class="fa-solid fa-address-book me-2 text-brand-blue"></i>
+            {{ proveedor.nombre }}
+        </h2>
+        <span class="text-muted d-block mt-1">
+            <i class="fa-solid fa-building me-1"></i> {{ proveedor.empresa if proveedor.empresa else 'Sin empresa registrada' }}
+            <span class="mx-2">|</span>
+            <i class="fa-solid fa-phone me-1"></i> {{ proveedor.telefono if proveedor.telefono else 'Sin teléfono' }}
+        </span>
+    </div>
+    <div>
+        <a href="{{ url_for('providers_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-4 me-2">
+            <i class="fa-solid fa-arrow-left me-1"></i> Volver
+        </a>
+        <form action="{{ url_for('providers_bp.eliminar', id=proveedor.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este proveedor? Toda su historia de facturas y pagos se borrará.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger rounded-pill px-3">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card card-custom h-100 p-4 border-0 shadow-sm" style="border-left: 4px solid #A3D8DE !important;">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <i class="fa-solid fa-file-invoice-dollar fs-1 text-muted"></i>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#nuevaFacturaModal">
+                    <i class="fa-solid fa-plus me-1"></i> Factura
+                </button>
+            </div>
+            <h6 class="text-secondary fw-bold text-uppercase mb-1">Total Facturado</h6>
+            <h3 class="fw-bolder text-dark mb-0">${{ total_facturado|cop }}</h3>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card card-custom h-100 p-4 border-0 shadow-sm" style="border-left: 4px solid #28a745 !important;">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <i class="fa-solid fa-money-bill-transfer fs-1 text-muted"></i>
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#nuevoAbonoModal">
+                    <i class="fa-solid fa-plus me-1"></i> Abono
+                </button>
+            </div>
+            <h6 class="text-secondary fw-bold text-uppercase mb-1">Total Abonado</h6>
+            <h3 class="fw-bolder text-success mb-0">${{ total_abonado|cop }}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-custom h-100 p-4 border-0 shadow-sm {% if saldo_pendiente > 0 %}bg-danger text-white{% elif saldo_pendiente < 0 %}bg-success text-white{% else %}bg-light{% endif %}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <i class="fa-solid fa-scale-balanced fs-1 {% if saldo_pendiente != 0 %}text-white-50{% else %}text-muted{% endif %}"></i>
+            </div>
+            <h6 class="{% if saldo_pendiente != 0 %}text-white-50{% else %}text-secondary{% endif %} fw-bold text-uppercase mb-1">Saldo Pendiente a Pagar</h6>
+            <h3 class="fw-bolder mb-0">${{ saldo_pendiente|cop }}</h3>
+            {% if saldo_pendiente > 0 %}
+                <small class="d-block mt-1 opacity-75">Existe deuda con el proveedor.</small>
+            {% elif saldo_pendiente < 0 %}
+                <small class="d-block mt-1 opacity-75">Saldo a favor de la empresa.</small>
+            {% else %}
+                <small class="d-block mt-1 opacity-75">Cuenta al día.</small>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Tablas de Historial -->
+<div class="row g-4">
+    <!-- Facturas -->
+    <div class="col-md-7">
+        <div class="card card-custom p-0 h-100 border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                <h5 class="fw-bold text-brand-black mb-0"><i class="fa-solid fa-file-invoice text-brand-blue me-2"></i>Historial de Facturas</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary" style="font-size: 0.85rem;">
+                            <tr>
+                                <th class="ps-4">FECHA</th>
+                                <th>FOLIO / REF</th>
+                                <th>DESCRIPCIÓN</th>
+                                <th class="text-end">MONTO TOTAL</th>
+                                <th class="text-center pe-4">SOPORTE</th>
+                            </tr>
+                        </thead>
+                        <tbody style="font-size: 0.9rem;">
+                            {% for inv in facturas %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ inv.fecha_factura.strftime('%Y-%m-%d') }}</td>
+                                <td class="fw-bold">{{ inv.numero_factura if inv.numero_factura else '-' }}</td>
+                                <td class="text-truncate" style="max-width: 150px;" title="{{ inv.descripcion }}">{{ inv.descripcion if inv.descripcion else '-' }}</td>
+                                <td class="text-end fw-bold text-dark">${{ inv.monto_total|cop }}</td>
+                                <td class="text-center pe-4">
+                                    {% if inv.comprobante %}
+                                        <a href="{{ url_for('static', filename='uploads/providers/' ~ inv.comprobante) }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small">Sin adjunto</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No hay facturas registradas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Abonos -->
+    <div class="col-md-5">
+        <div class="card card-custom p-0 h-100 border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                <h5 class="fw-bold text-brand-black mb-0"><i class="fa-solid fa-money-check-dollar text-success me-2"></i>Historial de Abonos</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary" style="font-size: 0.85rem;">
+                            <tr>
+                                <th class="ps-4">FECHA</th>
+                                <th>OBSERVACIÓN</th>
+                                <th class="text-end pe-4">MONTO ABONADO</th>
+                            </tr>
+                        </thead>
+                        <tbody style="font-size: 0.9rem;">
+                            {% for pay in pagos %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ pay.fecha_pago.strftime('%Y-%m-%d') }}</td>
+                                <td class="text-truncate" style="max-width: 150px;" title="{{ pay.observacion }}">{{ pay.observacion if pay.observacion else '-' }}</td>
+                                <td class="text-end fw-bold text-success pe-4">${{ pay.monto_abonado|cop }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">No hay pagos registrados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Factura -->
+<div class="modal fade" id="nuevaFacturaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-brand-black"><i class="fa-solid fa-file-invoice-dollar me-2 text-brand-blue"></i>Registrar Factura de Compra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('providers_bp.registrar_factura', id=proveedor.id) }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Monto Total a Pagar <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-dollar-sign text-muted"></i></span>
+                            <input type="number" step="0.01" min="0.01" name="monto_total" class="form-control border-start-0 bg-light" required autofocus>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número de Factura / Folio (Opcional)</label>
+                        <input type="text" name="numero_factura" class="form-control bg-light border-0" placeholder="Ej: F-12345">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descripción (Opcional)</label>
+                        <input type="text" name="descripcion" class="form-control bg-light border-0" placeholder="Ej: Mercancía de Agosto">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Adjuntar Soporte (Opcional)</label>
+                        <input type="file" name="comprobante" class="form-control bg-light border-0" accept=".png,.jpg,.jpeg,.pdf">
+                        <small class="text-muted d-block mt-1">Formatos permitidos: PDF, JPG, PNG.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-blue rounded-pill px-4">Guardar Factura</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Abono -->
+<div class="modal fade" id="nuevoAbonoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-money-bill-transfer me-2"></i>Registrar Abono o Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('providers_bp.registrar_pago', id=proveedor.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Monto del Abono <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-dollar-sign text-muted"></i></span>
+                            <input type="number" step="0.01" min="0.01" name="monto_abonado" class="form-control border-start-0 bg-light" required autofocus>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Observaciones (Opcional)</label>
+                        <input type="text" name="observacion" class="form-control bg-light border-0" placeholder="Ej: Transferencia Bancolombia #1234">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4">Registrar Abono</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

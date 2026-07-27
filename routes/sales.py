@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, flash, redirect, render_template, abort, url_for
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariant, Sale, SaleDetail, SalePayment, SaleClient, Expense, obtener_hora_bogota
+from models import db, Product, ProductVariant, Sale, SaleDetail, SalePayment, Expense, obtener_hora_bogota
 from decorators import admin_required
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -50,32 +50,11 @@ def procesar_venta():
             except ValueError:
                 pass # Fallback silencioso a la hora actual si el formato falla
 
-        # Validar tipo de venta (Celulares vs General) y evitar mezcla
-        tipo_venta_detectado = None
-        for item in items:
-            es_manual = item.get('es_manual', False)
-            if es_manual:
-                tipo_item = 'general'
-            else:
-                prod_id = item.get('product_id')
-                producto_check = Product.query.get(prod_id)
-                if not producto_check:
-                    return jsonify({'error': f"El producto con ID {prod_id} no existe."}), 400
-                tipo_item = 'celulares' if producto_check.tipo_inventario == 'celulares' else 'general'
-            
-            if tipo_venta_detectado is None:
-                tipo_venta_detectado = tipo_item
-            elif tipo_venta_detectado != tipo_item:
-                return jsonify({'error': 'No se pueden mezclar celulares con accesorios en la misma venta. Por favor, realice transacciones separadas para no descuadrar los arqueos.'}), 400
-        
-        tipo_venta_detectado = tipo_venta_detectado or 'general'
-
         nueva_venta = Sale(
             vendedor_id=current_user.id,
             monto_total=Decimal('0.00'),
             metodo_pago=metodo_pago_principal,
-            fecha_venta=fecha_venta_obj,
-            tipo_venta=tipo_venta_detectado
+            fecha_venta=fecha_venta_obj
         )
         db.session.add(nueva_venta)
         db.session.flush()
@@ -214,16 +193,6 @@ def procesar_venta():
         if total_pagos != monto_total:
             raise ValueError(f"La suma de los pagos (${total_pagos}) no coincide con el total de la venta (${monto_total}). Diferencia: ${monto_total - total_pagos}.")
 
-        # Guardar datos del cliente si se vendió un celular
-        cliente_data = data.get('cliente')
-        if cliente_data and isinstance(cliente_data, dict):
-            cliente = SaleClient(
-                sale_id=nueva_venta.id,
-                nombre=cliente_data.get('nombre', 'Desconocido').strip(),
-                documento=cliente_data.get('documento', '0').strip(),
-                telefono=cliente_data.get('telefono', '').strip()
-            )
-            db.session.add(cliente)
 
         db.session.commit()
         
@@ -242,25 +211,59 @@ def procesar_venta():
         db.session.rollback()
         return jsonify({'error': 'Ocurrió un error interno al procesar la venta.'}), 500
 
+@sales_bp.route('/api/search_products')
+@login_required
+def api_search_products():
+    query = request.args.get('q', '').strip()
+    
+    if len(query) < 2:
+        return jsonify([])
+    
+    productos = Product.query.filter_by(tipo_inventario='tienda').filter(
+        or_(
+            Product.sku.ilike(f'%{query}%'),
+            Product.nombre.ilike(f'%{query}%')
+        )
+    ).limit(10).all()
+    
+    results = []
+    for p in productos:
+        # Preparar data de la misma manera que el endpoint de escaner exacto
+        variantes_data = []
+        if p.variantes:
+            for v in p.variantes:
+                variantes_data.append({
+                    'id': v.id,
+                    'nombre': v.nombre_variante,
+                    'stock': v.cantidad_stock,
+                    'precio_costo': float(v.precio_costo) if v.precio_costo else None,
+                    'precio_minimo': float(v.precio_minimo) if v.precio_minimo else None,
+                    'precio_sugerido': float(v.precio_sugerido) if v.precio_sugerido else None
+                })
+        
+        results.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'sku': p.sku,
+            'tipo_inventario': p.tipo_inventario,
+            'cantidad_stock': p.total_stock,
+            'precio_minimo': float(p.precio_minimo),
+            'precio_sugerido': float(p.precio_sugerido),
+            'precio_costo': float(p.precio_costo),
+            'variantes': variantes_data
+        })
+    
+    return jsonify(results)
+
 # Endpoint API asíncrono para el escáner del Punto de Venta
 @sales_bp.route('/api/producto/<path:sku>', methods=['GET'])
 @login_required
 def api_buscar_producto(sku):
-    producto = Product.query.filter(Product.sku == sku, Product.tipo_inventario.in_(['tienda', 'celulares'])).first()
+    producto = Product.query.filter(Product.sku == sku, Product.tipo_inventario == 'tienda').first()
     auto_select_variant = None
     
     if not producto:
-        # Búsqueda por IMEI en variantes de celulares
-        variante = ProductVariant.query.join(Product).filter(
-            Product.tipo_inventario == 'celulares',
-            ProductVariant.nombre_variante.like(f"%{sku}%")
-        ).first()
-        
-        if variante:
-            producto = variante.producto
-            auto_select_variant = variante.id
-        else:
-            return jsonify({'error': 'Código SKU o IMEI no encontrado en el sistema'}), 404
+        return jsonify({'error': 'Código SKU no encontrado en el sistema'}), 404
         
     return jsonify({
         'id': producto.id,
@@ -467,7 +470,7 @@ def catalogo():
     if query_str:
         # Motor de similitud Case-Insensitive (Like)
         search_term = f"%{query_str}%"
-        productos = Product.query.filter(Product.tipo_inventario.in_(['tienda', 'celulares'])).filter(
+        productos = Product.query.filter(Product.tipo_inventario == 'tienda').filter(
             or_(
                 Product.sku.ilike(search_term), 
                 Product.nombre.ilike(search_term)
@@ -475,7 +478,7 @@ def catalogo():
         ).limit(50).all()
     else:
         # Límite pasivo de 50 ítems para ahorrar memoria RAM de BD en carga inicial
-        productos = Product.query.filter(Product.tipo_inventario.in_(['tienda', 'celulares'])).limit(50).all()
+        productos = Product.query.filter(Product.tipo_inventario == 'tienda').limit(50).all()
         
     return render_template('sales/catalogo.html', productos=productos, q=query_str)
 
@@ -484,6 +487,6 @@ def catalogo():
 def caja_visual():
     from models import obtener_hora_bogota
     hoy_bogota = obtener_hora_bogota()
-    productos = Product.query.filter(Product.tipo_inventario.in_(['tienda', 'celulares'])).order_by(Product.nombre.asc()).all()
+    productos = Product.query.filter(Product.tipo_inventario == 'tienda').order_by(Product.nombre.asc()).all()
     return render_template('sales/caja_visual.html', productos=productos, hoy=hoy_bogota.strftime('%Y-%m-%d'))
 

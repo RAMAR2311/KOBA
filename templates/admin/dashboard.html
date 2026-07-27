@@ -6,7 +6,30 @@
         <h2 class="fw-bold text-brand-black mb-0">Dashboard Operativo</h2>
         <p class="text-muted">¡Bienvenido al panel central, {{ current_user.nombre }}!</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
+        <form method="GET" action="{{ url_for('admin_bp.dashboard') }}" class="d-flex align-items-center me-2">
+            <select name="mes" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light me-2" style="width: auto;">
+                <option value="1" {% if mes == 1 %}selected{% endif %}>Enero</option>
+                <option value="2" {% if mes == 2 %}selected{% endif %}>Febrero</option>
+                <option value="3" {% if mes == 3 %}selected{% endif %}>Marzo</option>
+                <option value="4" {% if mes == 4 %}selected{% endif %}>Abril</option>
+                <option value="5" {% if mes == 5 %}selected{% endif %}>Mayo</option>
+                <option value="6" {% if mes == 6 %}selected{% endif %}>Junio</option>
+                <option value="7" {% if mes == 7 %}selected{% endif %}>Julio</option>
+                <option value="8" {% if mes == 8 %}selected{% endif %}>Agosto</option>
+                <option value="9" {% if mes == 9 %}selected{% endif %}>Septiembre</option>
+                <option value="10" {% if mes == 10 %}selected{% endif %}>Octubre</option>
+                <option value="11" {% if mes == 11 %}selected{% endif %}>Noviembre</option>
+                <option value="12" {% if mes == 12 %}selected{% endif %}>Diciembre</option>
+            </select>
+            <select name="anio" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light me-2" style="width: auto;">
+                <option value="2024" {% if anio == 2024 %}selected{% endif %}>2024</option>
+                <option value="2025" {% if anio == 2025 %}selected{% endif %}>2025</option>
+                <option value="2026" {% if anio == 2026 %}selected{% endif %}>2026</option>
+                <option value="2027" {% if anio == 2027 %}selected{% endif %}>2027</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3">Filtrar</button>
+        </form>
         <button type="button" class="btn btn-blue rounded-pill fw-bold shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#modalBalance">
             <i class="fa-solid fa-scale-balanced me-2"></i>Generar Balance
         </button>
@@ -46,12 +69,12 @@
 <div class="row g-3 mb-4">
     <!-- 1. Tarjeta: Ingresos Totales (Botones/Textos Azul Turquesa / .btn-blue) -->
     <div class="col-md-3">
-        <div class="card card-custom h-100 p-4">
+        <div class="card card-custom h-100 p-4 border-0">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <i class="fa-solid fa-sack-dollar fs-1" style="color: var(--brand-blue);"></i>
-                <span class="badge bg-brand-blue rounded-pill">Quincena Actual</span>
+                <span class="badge bg-brand-blue rounded-pill">{{ nombre_mes }}</span>
             </div>
-            <h5 class="text-brand-black fw-bold">Ingresos (Quincena)</h5>
+            <h5 class="text-brand-black fw-bold">Ingresos (Mes)</h5>
             <h2 class="fw-bolder" style="color: var(--brand-blue);">${{ (total_ventas)|cop }}</h2>
             <p class="text-muted small mb-0"><i class="fa-solid fa-receipt me-1"></i> {{ conteo_ventas }} ventas realizadas</p>
             <div class="mt-auto pt-3">
@@ -60,46 +83,62 @@
         </div>
     </div>
 
-    <!-- 2. Tarjeta: Productos en Catálogo (Rosa Pastel / .btn-pink) -->
+    <!-- 2. Tarjeta: Productos en Catálogo -->
     <div class="col-md-3">
-        <div class="card card-custom h-100 p-4">
+        <div class="card card-custom h-100 p-4 border-0">
             <div class="d-flex justify-content-between align-items-start mb-3">
-                <i class="fa-solid fa-cubes fs-1" style="color: var(--brand-pink);"></i>
+                <i class="fa-solid fa-cubes fs-1" style="color: var(--brand-blue);"></i>
             </div>
             <h5 class="text-brand-black fw-bold">Productos en Catálogo</h5>
-            <h2 class="fw-bolder text-brand-black">{{ total_productos }} uds.</h2>
+            <h2 class="fw-bolder" style="color: var(--brand-blue);">{{ total_productos }} uds.</h2>
             <div class="mt-auto pt-4">
-                <a href="/inventory/" class="btn btn-pink w-100 rounded-pill text-brand-black"><i class="fa-solid fa-sliders me-2"></i> Gestionar Inventario</a>
+                <a href="/inventory/" class="btn btn-blue w-100 rounded-pill"><i class="fa-solid fa-sliders me-2"></i> Gestionar Inventario</a>
             </div>
         </div>
     </div>
 
-    <!-- 3. Tarjeta: Alertas de Stock (Danger Colors / Bootstrap Nativo) -->
+    <!-- 3. Tarjeta: Alertas de Stock -->
     <div class="col-md-3">
-        <div class="card card-custom h-100 p-4 border border-danger border-2">
+        <div class="card card-custom h-100 p-4 border-0">
             <div class="d-flex justify-content-between align-items-start mb-3">
-                <i class="fa-solid fa-triangle-exclamation fs-1 text-danger"></i>
+                <i class="fa-solid fa-triangle-exclamation fs-1" style="color: var(--brand-blue);"></i>
             </div>
             <h5 class="text-brand-black fw-bold">Alertas Críticas de Stock</h5>
-            <h2 class="fw-bolder text-danger">{{ productos_bajo_stock }} productos</h2>
+            <h2 class="fw-bolder" style="color: var(--brand-blue);">{{ productos_bajo_stock }} productos</h2>
             <p class="text-muted small">Tienen existencias limitadas (10 o menos unidades).</p>
             <div class="mt-auto pt-3">
-                <a href="/inventory/" class="btn btn-outline-danger w-100 rounded-pill fw-bold"><i class="fa-solid fa-eye me-2"></i> Revisar Urgencias</a>
+                <a href="/inventory/" class="btn btn-blue w-100 rounded-pill"><i class="fa-solid fa-eye me-2"></i> Revisar Urgencias</a>
             </div>
         </div>
     </div>
 
     <!-- 4. Tarjeta: Maneos de Mercancía -->
     <div class="col-md-3">
-        <div class="card card-custom h-100 p-4 border border-warning border-2">
+        <div class="card card-custom h-100 p-4 border-0">
             <div class="d-flex justify-content-between align-items-start mb-3">
-                <i class="fa-solid fa-handshake fs-1 text-warning"></i>
+                <i class="fa-solid fa-handshake fs-1" style="color: var(--brand-blue);"></i>
             </div>
             <h5 class="text-brand-black fw-bold">Maneos Activos</h5>
-            <h2 class="fw-bolder text-warning">{{ maneos_activos }} docs.</h2>
+            <h2 class="fw-bolder" style="color: var(--brand-blue);">{{ maneos_activos }} docs.</h2>
             <p class="text-muted small">Préstamos vecinos esperando resolución.</p>
             <div class="mt-auto pt-3">
-                <a href="{{ url_for('admin_bp.maneos') }}" class="btn btn-outline-warning text-dark w-100 rounded-pill fw-bold"><i class="fa-solid fa-eye me-2"></i> Ver Maneos</a>
+                <a href="{{ url_for('admin_bp.maneos') }}" class="btn btn-blue w-100 rounded-pill"><i class="fa-solid fa-eye me-2"></i> Ver Maneos</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <!-- 5. Tarjeta: Módulo de Proveedores -->
+    <div class="col-md-3">
+        <div class="card card-custom h-100 p-4 border-0" style="border-left: 4px solid var(--brand-blue) !important;">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <i class="fa-solid fa-truck-field fs-1 text-secondary"></i>
+            </div>
+            <h5 class="text-brand-black fw-bold">Gestión de Proveedores</h5>
+            <p class="text-muted small">Cuentas por pagar, facturas y abonos.</p>
+            <div class="mt-auto pt-3">
+                <a href="/proveedores" class="btn btn-blue w-100 rounded-pill"><i class="fa-solid fa-folder-open me-2"></i> Abrir Proveedores</a>
             </div>
         </div>
     </div>

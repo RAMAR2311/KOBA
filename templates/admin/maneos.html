@@ -15,9 +15,26 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="variant_id" id="variant_id_hidden" value="">
         <div class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-brand-black">Cantidad</label>
+                <input type="number" name="cantidad" class="form-control bg-light border-0" min="1" value="1" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-brand-black">Valor (Und)</label>
+                <input type="number" step="0.01" name="valor_fijo" class="form-control bg-light border-0" placeholder="Ej: 15000" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-brand-black">Local Vecino / Persona</label>
+                <input type="text" name="local_vecino" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex" required>
+            </div>
+            <div class="col-md-5">
                 <label class="form-label fw-bold text-brand-black">Producto a Prestar / Entregar (SKU)</label>
-                <input type="text" name="sku" id="maneo_sku_input" class="form-control bg-light border-0" autofocus placeholder="Escanea o digita el SKU..." required>
+                <input type="text" name="sku" id="maneo_sku_input" list="productos_list" class="form-control bg-light border-0" autofocus placeholder="Escribe el nombre o escanea el SKU..." required>
+                <datalist id="productos_list">
+                    {% for p in productos %}
+                        <option value="{{ p.sku }}">{{ p.nombre }}</option>
+                    {% endfor %}
+                </datalist>
             </div>
             <!-- Selector de Subcategoría (aparece dinámicamente) -->
             <div class="col-md-3" id="variant_selector_col" style="display: none;">
@@ -27,16 +44,8 @@
                 </select>
                 <small class="text-muted" id="variant_stock_info"></small>
             </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-brand-black">Local Vecino / Persona</label>
-                <input type="text" name="local_vecino" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex" required>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label fw-bold text-brand-black">Cantidad</label>
-                <input type="number" name="cantidad" class="form-control bg-light border-0" min="1" value="1" required>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-blue w-100 rounded-pill"><i class="fa-solid fa-paper-plane me-1"></i> Prestar</button>
+            <div class="col-md-12 mt-3 text-end">
+                <button type="submit" class="btn btn-blue px-5 rounded-pill"><i class="fa-solid fa-paper-plane me-1"></i> Registrar Maneo</button>
             </div>
         </div>
     </form>
@@ -48,10 +57,10 @@
         <table class="table table-hover table-custom mb-0">
             <thead class="bg-light">
                 <tr>
-                    <th class="ps-4">FECHA PRÉSTAMO</th>
+                    <th class="ps-4 text-center">CANTIDAD</th>
+                    <th class="text-center">VALOR</th>
                     <th>LOCAL VECINO</th>
                     <th>PRODUCTO (SKU)</th>
-                    <th class="text-center">CANTIDAD</th>
                     <th class="text-center">ESTADO</th>
                     <th class="text-center">ACCIONES RÁPIDAS</th>
                 </tr>
@@ -59,7 +68,8 @@
             <tbody>
                 {% for m in maneos %}
                 <tr>
-                    <td class="ps-4 text-muted"><small>{{ m.fecha_prestamo.strftime('%d/%m/%Y %H:%M') }}</small></td>
+                    <td class="ps-4 text-center fw-bold text-brand-blue">{{ m.cantidad }} uds</td>
+                    <td class="text-center fw-bold text-success">${{ '{:,.0f}'.format(m.cantidad * (m.valor_fijo if m.valor_fijo else (m.variante.precio_sugerido if m.variante else m.producto.precio_sugerido))) }}</td>
                     <td class="fw-bold text-brand-black"><i class="fa-solid fa-store text-muted me-2"></i>{{ m.local_vecino }}</td>
                     <td>
                         <span class="text-brand-black fw-semibold">{{ m.producto.nombre }}</span> <small class="text-muted">({{ m.producto.sku }})</small>
@@ -67,7 +77,6 @@
                             <br><span class="badge bg-light text-primary border border-primary border-opacity-25 rounded-pill px-2 mt-1" style="font-size: 0.75rem;"><i class="fa-solid fa-layer-group me-1"></i>{{ m.variante.nombre_variante }}</span>
                         {% endif %}
                     </td>
-                    <td class="text-center fw-bold">{{ m.cantidad }} uds</td>
                     <td class="text-center">
                         {% if m.estado == 'PENDIENTE' %}
                             <span class="badge bg-warning text-dark border border-warning rounded-pill px-3 py-2">Pendiente</span>
@@ -113,11 +122,7 @@
                                                             <label class="form-label fw-bold">Precio Unitario</label>
                                                             <div class="input-group">
                                                                 <span class="input-group-text border-0 bg-light text-success fw-bold">$</span>
-                                                                {% if m.variante and m.variante.precio_sugerido %}
-                                                                    <input type="number" step="1" min="{{ "%.0f"|format((m.variante.precio_minimo or m.producto.precio_minimo)|float) }}" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
-                                                                {% else %}
-                                                                    <input type="number" step="1" min="{{ "%.0f"|format(m.producto.precio_minimo) }}" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.producto.precio_sugerido) }}" required>
-                                                                {% endif %}
+                                                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
                                                             </div>
                                                         </div>
                                                     </div>
