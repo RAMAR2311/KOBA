@@ -20,3 +20,5 @@ Werkzeug==3.1.6
 WTForms==3.2.1
 psycopg2-binary
 gunicorn==21.2.0
+pandas
+openpyxl
