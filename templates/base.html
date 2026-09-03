@@ -194,10 +194,26 @@
                 KOBA
             </a>
 
-            <!-- Spacer derecho para equilibrar flex -->
-            <div style="width: 40px;"></div>
+            <!-- Badge Superior Servidor Zenic (Derecha) -->
+            <div class="d-flex align-items-center">
+                {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+                    {% if pago_servidor.estado == 'pagado' or pago_servidor.estado == 'al_dia' %}
+                    <button type="button" 
+                            class="btn btn-sm px-2 px-md-3 py-1 rounded-pill fw-bold d-flex align-items-center gap-1 shadow-sm text-nowrap"
+                            style="background-color: #d1e7dd; color: #0f5132; border: 1.5px solid #0f5132; font-size: 0.82rem;"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#modalPagoServidor">
+                        <i class="fa-solid fa-circle-check" style="color: #0f5132;"></i>
+                        <span>✓ Zenic: Al día</span>
+                    </button>
+                    {% endif %}
+                {% else %}
+                    <div style="width: 40px;"></div>
+                {% endif %}
+            </div>
         </div>
     </nav>
+
 
     {% if current_user.is_authenticated %}
     <!-- Offcanvas Menú Lateral (Sidebar) -->
@@ -345,6 +361,50 @@
 
     <!-- App Container -->
     <main class="container mb-5">
+        {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+            {% if pago_servidor.estado == 'preventivo' %}
+                <div class="alert alert-warning border-warning border-opacity-50 shadow-sm rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation fs-5 text-warning-emphasis"></i>
+                        <span class="fw-semibold">Mensualidad Servidor Zenic: Vence el 30 de {{ pago_servidor.mes_nombre }} (faltan {{ pago_servidor.dias_restantes }} días)</span>
+                    </div>
+                    <button class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
+                        <i class="fa-solid fa-wallet me-1"></i> Ver Pago
+                    </button>
+                </div>
+            {% elif pago_servidor.estado == 'hoy' %}
+                <div class="alert alert-danger border-danger border-opacity-50 shadow-sm rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-bell fs-5 text-danger"></i>
+                        <span class="fw-bold">¡Hoy 30 de {{ pago_servidor.mes_nombre }} vence la mensualidad de tu Servidor Zenic!</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
+                        <i class="fa-solid fa-bolt me-1"></i> Pagar Hoy
+                    </button>
+                </div>
+            {% elif pago_servidor.estado == 'gabela' %}
+                <div class="alert alert-warning border-warning border-opacity-50 shadow-sm rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left fs-5 text-warning-emphasis"></i>
+                        <span class="fw-semibold">⏳ Periodo de gracia Servidor Zenic (quedan {{ pago_servidor.dias_gabela }} días de gabela). Venció el 30 de {{ pago_servidor.mes_nombre }}.</span>
+                    </div>
+                    <button class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Reportar Pago
+                    </button>
+                </div>
+            {% elif pago_servidor.estado == 'vencido' %}
+                <div class="alert alert-danger border-danger border-opacity-50 shadow-sm rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation fs-5 text-danger"></i>
+                        <span class="fw-bold">🚨 Mensualidad Servidor Zenic vencida (Gabela de 5 días agotada). Venció el 30 de {{ pago_servidor.mes_nombre }}.</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Reportar Pago
+                    </button>
+                </div>
+            {% endif %}
+        {% endif %}
+
         <!-- Renderizado de Flash Messages de Flask -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -359,6 +419,121 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+    <!-- Modal Pago de Servidor Zenic -->
+    <div class="modal fade" id="modalPagoServidor" tabindex="-1" aria-labelledby="modalPagoServidorLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="background-color: #ffffff;">
+                <!-- Modal Header -->
+                <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(135deg, #008B8B 0%, #005656 100%);">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-server fs-4"></i>
+                        <h5 class="modal-title fw-bold m-0" id="modalPagoServidorLabel">Pago Mensualidad Servidor Zenic</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4 text-dark">
+                    <!-- Status Badge & Date -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fw-semibold">
+                            <i class="fa-solid fa-calendar-day me-1"></i> Vencimiento: 30 de {{ pago_servidor.mes_nombre }} {{ pago_servidor.anio }}
+                        </span>
+                        {% if pago_servidor.estado == 'pagado' %}
+                        <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold">
+                            <i class="fa-solid fa-circle-check me-1"></i> Pagado
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold">
+                            <i class="fa-solid fa-clock me-1"></i> Pendiente
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Monto Destacado -->
+                    <div class="card border-0 bg-light rounded-4 p-3 text-center mb-4 shadow-sm" style="border: 2px dashed #008B8B !important;">
+                        <span class="text-uppercase text-muted fw-bold small">Valor de la Mensualidad</span>
+                        <h2 class="fw-extrabold m-0 text-success" style="font-size: 2.2rem;">${{ pago_servidor.monto }} COP</h2>
+                    </div>
+
+                    <p class="fw-semibold text-secondary small mb-2"><i class="fa-solid fa-building-columns me-1"></i> Cuentas de Transferencia Directa:</p>
+                    
+                    <!-- Tarjetas de Transferencia -->
+                    <div class="row g-3 mb-4">
+                        <!-- Nu Card -->
+                        <div class="col-6">
+                            <div class="card border rounded-3 p-3 text-center h-100 position-relative shadow-sm" style="background-color: #F8F9FA;">
+                                <div class="fw-bold mb-1" style="color: #820AD1;">
+                                    <i class="fa-solid fa-credit-card me-1"></i> Nu
+                                </div>
+                                <span class="text-muted small">Llave Transferencia</span>
+                                <div class="fw-extrabold fs-6 text-dark my-1 select-all" id="nuKeyText">{{ pago_servidor.nu_llave }}</div>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary rounded-pill mt-1 py-1 fw-bold"
+                                        onclick="copiarTexto('{{ pago_servidor.nu_llave }}', this)">
+                                    <i class="fa-regular fa-copy me-1"></i> Copiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Nequi Card -->
+                        <div class="col-6">
+                            <div class="card border rounded-3 p-3 text-center h-100 position-relative shadow-sm" style="background-color: #F8F9FA;">
+                                <div class="fw-bold mb-1" style="color: #FF007A;">
+                                    <i class="fa-solid fa-mobile-screen-button me-1"></i> Nequi
+                                </div>
+                                <span class="text-muted small">Número Celular</span>
+                                <div class="fw-extrabold fs-6 text-dark my-1 select-all" id="nequiNumText">{{ pago_servidor.nequi_num }}</div>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary rounded-pill mt-1 py-1 fw-bold"
+                                        onclick="copiarTexto('{{ pago_servidor.nequi_num }}', this)">
+                                    <i class="fa-regular fa-copy me-1"></i> Copiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón de WhatsApp con Token de Confirmación -->
+                    <div class="d-grid gap-2">
+                        <a href="{{ pago_servidor.whatsapp_url }}" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="btn btn-success btn-lg rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 py-3">
+                            <i class="fa-brands fa-whatsapp fs-3"></i>
+                            <span>Reportar Pago por WhatsApp</span>
+                        </a>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted" style="font-size: 0.78rem;">
+                            <i class="fa-solid fa-lock me-1"></i> Incluye enlace directo con token firmado para confirmación en 1 solo clic.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copiarTexto(texto, btn) {
+            navigator.clipboard.writeText(texto).then(() => {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> ¡Copiado!';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-primary');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+            });
+        }
+    </script>
+    {% endif %}
+
 
     <script>
         // Registro del Service Worker para soporte PWA
