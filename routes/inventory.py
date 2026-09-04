@@ -89,8 +89,19 @@ def nuevo():
         # Si hay variantes, el stock base del producto maestro se ignora o se pone en 0
         stock_base = 0 if v_nombres else int(request.form.get('cantidad_stock') or 0)
 
+        # Validar unicidad del SKU antes de guardar
+        sku_candidato = request.form.get('sku', '').strip()
+        if not sku_candidato:
+            flash('Debes ingresar un código SKU para el producto.', 'warning')
+            return render_template('inventory/form.html')
+
+        prod_existente = Product.query.filter_by(sku=sku_candidato).first()
+        if prod_existente:
+            flash(f'El código SKU "{sku_candidato}" ya existe en el inventario (pertenece a "{prod_existente.nombre}"). Cada producto debe tener un SKU único.', 'warning')
+            return render_template('inventory/form.html')
+
         nuevo_prod = Product(
-            sku=request.form.get('sku').strip(),
+            sku=sku_candidato,
             nombre=request.form.get('nombre').strip(),
             tipo_inventario=tipo,
             cantidad_stock=stock_base,
@@ -135,7 +146,10 @@ def nuevo():
             return redirect(url_for('inventory_bp.index'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al intentar guardar el producto: {str(e)}', 'danger')
+            if 'unique' in str(e).lower() and 'sku' in str(e).lower():
+                flash(f'El SKU "{sku_candidato}" ya se encuentra registrado. Utiliza un código diferente.', 'danger')
+            else:
+                flash(f'Error al intentar guardar el producto: {str(e)}', 'danger')
             
     return render_template('inventory/form.html')
 
@@ -172,8 +186,18 @@ def editar_producto(id):
             print("DEBUG: 'imagen' NOT found in request.files")
                 
                 
-        # Datos básicos
-        producto.sku = request.form.get('sku').strip()
+        # Datos básicos con validación de SKU único
+        nuevo_sku = request.form.get('sku', '').strip()
+        if not nuevo_sku:
+            flash('El código SKU no puede estar vacío.', 'warning')
+            return redirect(url_for('inventory_bp.editar_producto', id=id))
+
+        otro_con_sku = Product.query.filter(Product.sku == nuevo_sku, Product.id != id).first()
+        if otro_con_sku:
+            flash(f'El SKU "{nuevo_sku}" ya pertenece a otro producto ("{otro_con_sku.nombre}"). Los códigos SKU deben ser únicos.', 'warning')
+            return redirect(url_for('inventory_bp.editar_producto', id=id))
+
+        producto.sku = nuevo_sku
         producto.nombre = request.form.get('nombre').strip()
         producto.precio_costo = float(request.form.get('precio_costo') or 0.0)
         producto.precio_minimo = float(request.form.get('precio_minimo') or 0.0)
@@ -256,7 +280,10 @@ def editar_producto(id):
         except Exception as e:
             print("DEBUG: Exception during commit! Exception:", str(e))
             db.session.rollback()
-            flash(f'Error en la base de datos: {str(e)}', 'danger')
+            if 'unique' in str(e).lower() and 'sku' in str(e).lower():
+                flash('No se pudo actualizar: El código SKU ya pertenece a otro producto. Cada producto debe tener un SKU único.', 'danger')
+            else:
+                flash(f'Error en la base de datos: {str(e)}', 'danger')
 
     # El objeto producto se pasa a Jinja para auto-poblar (pre-llenar) el formulario en modo edición
     return render_template('inventory/form.html', producto=producto)
