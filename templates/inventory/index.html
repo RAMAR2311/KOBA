@@ -15,24 +15,47 @@
 
 
 
-<!-- Buscador Rápido de Inventario -->
+<!-- Buscador Dinámico de Inventario -->
 <div class="card card-custom p-3 mb-4 border-0 shadow-sm bg-white">
     <div class="row align-items-center">
-        <div class="col-md-8 col-lg-6 position-relative">
-            <div class="input-group input-group-lg shadow-sm rounded-pill border">
-                <span class="input-group-text bg-white border-0 ps-4"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                <input type="text" id="inventarioSearch" class="form-control border-0 bg-white shadow-none ps-2" placeholder="Busca por SKU o Nombre del producto..." autocomplete="off" style="border-radius: 0 50px 50px 0;">
-                <button class="btn btn-light border-0 px-3 text-muted" type="button" id="clearSearch" title="Limpiar búsqueda" style="border-radius: 0 50px 50px 0;">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <!-- Contenedor para resultados desplegables -->
-            <div id="searchDropdown" class="dropdown-menu shadow-lg border-0 w-100 p-0 mt-2 d-none" style="max-height: 400px; overflow-y: auto;">
+        <div class="col-md-8 col-lg-7 position-relative">
+            <form method="GET" action="{{ url_for('inventory_bp.index') }}" id="searchForm" class="m-0 position-relative">
+                <div class="input-group input-group-lg shadow-sm rounded-pill border bg-white overflow-hidden">
+                    <span class="input-group-text bg-white border-0 ps-4 text-muted">
+                        <i class="fa-solid fa-magnifying-glass" id="searchIcon"></i>
+                        <span class="spinner-border spinner-border-sm text-primary d-none" id="searchSpinner" role="status"></span>
+                    </span>
+                    <input type="text" 
+                           name="q" 
+                           id="inventarioSearch" 
+                           class="form-control border-0 bg-white shadow-none ps-2" 
+                           placeholder="Buscar por SKU, Nombre o Subcategoría (ej: S20FE, Silicon)..." 
+                           autocomplete="off" 
+                           value="{{ q or '' }}">
+                    <button class="btn btn-light border-0 px-3 text-muted {% if not q %}d-none{% endif %}" type="button" id="clearSearch" title="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <button type="submit" class="btn btn-blue px-4 fw-bold">
+                        Buscar
+                    </button>
+                </div>
+            </form>
+            <!-- Contenedor para resultados desplegables de autocompletado en vivo -->
+            <div id="searchDropdown" class="dropdown-menu shadow-lg border-0 w-100 p-0 mt-2 d-none" style="max-height: 420px; overflow-y: auto; z-index: 1050; border-radius: 16px;">
             </div>
         </div>
-        <div class="col-md-4 col-lg-6 text-md-end mt-3 mt-md-0">
-            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">
-                Mostrando <span id="visibleCount" class="text-brand-pink">{{ productos|length }}</span>
+        <div class="col-md-4 col-lg-5 text-md-end mt-3 mt-md-0">
+            {% if q %}
+            <div class="d-inline-flex align-items-center bg-light border rounded-pill px-3 py-1 me-2 mb-1">
+                <span class="small text-muted me-1">Filtro activo:</span>
+                <strong class="small text-brand-pink me-2">"{{ q }}"</strong>
+                <a href="{{ url_for('inventory_bp.index') }}" class="text-secondary hover-danger text-decoration-none" title="Quitar filtro">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </a>
+            </div>
+            {% endif %}
+            <small class="text-muted fw-bold text-uppercase d-block d-sm-inline" style="font-size: 0.75rem;">
+                Mostrando <span id="visibleCount" class="text-brand-pink">{% if q %}{{ paginacion.total }}{% else %}{{ productos|length }}{% endif %}</span>
                 de <strong>{{ total_productos }}</strong> productos
                 {% if paginacion.pages > 1 %}<span class="text-muted">&nbsp;· pág. {{ paginacion.page }}/{{ paginacion.pages }}</span>{% endif %}
             </small>
@@ -56,7 +79,12 @@
             </thead>
             <tbody>
                 {% for p in productos %}
-                <tr>
+                <tr class="producto-fila" 
+                    id="fila-prod-{{ p.id }}" 
+                    data-id="{{ p.id }}" 
+                    data-sku="{{ p.sku|lower }}" 
+                    data-nombre="{{ p.nombre|lower }}" 
+                    data-variantes="{% if p.variantes %}{% for v in p.variantes %}{{ v.nombre_variante|lower }} {% endfor %}{% endif %}">
                     <td class="text-muted text-nowrap">
                         {% if p.variantes %}
                             <button class="btn btn-sm btn-light border me-1 rounded-circle shadow-sm p-1" style="width: 28px; height: 28px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVariantes{{ p.id }}" aria-expanded="false" title="Ver Subcategorías">
@@ -136,7 +164,7 @@
                     </td>
                 </tr>
                 {% if p.variantes %}
-                <tr class="collapse bg-light" id="collapseVariantes{{ p.id }}">
+                <tr class="collapse bg-light collapse-variantes-fila" id="collapseVariantes{{ p.id }}" data-parent-id="{{ p.id }}">
                     <td colspan="7" class="p-0 border-bottom border-dark border-opacity-10 shadow-inner">
                         <div class="p-3 bg-white" style="border-left: 4px solid var(--brand-pink); border-radius: 0 0 8px 8px;">
                             <table class="table table-sm table-borderless mb-0">
@@ -173,10 +201,17 @@
                 {% endif %}
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">
+                    <td colspan="7" class="text-center py-5 text-muted">
                         <!-- Icono en Rosa Pastel -->
                         <i class="fa-solid fa-box-open fs-1 mb-3 text-brand-pink"></i>
-                        <p class="mb-0">El inventario está vacío.</p>
+                        <p class="mb-0">
+                            {% if q %}
+                                No se encontraron productos coincidentes con "<strong>{{ q }}</strong>". 
+                                <a href="{{ url_for('inventory_bp.index') }}" class="btn btn-sm btn-outline-primary rounded-pill ms-2">Ver todo el catálogo</a>
+                            {% else %}
+                                El inventario está vacío.
+                            {% endif %}
+                        </p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -193,7 +228,7 @@
         <!-- Anterior -->
         <li class="page-item {% if not paginacion.has_prev %}disabled{% endif %}">
             <a class="page-link rounded-pill px-3 shadow-sm"
-               href="{% if paginacion.has_prev %}{{ url_for('inventory_bp.index', page=paginacion.prev_num) }}{% else %}#{% endif %}"
+               href="{% if paginacion.has_prev %}{{ url_for('inventory_bp.index', page=paginacion.prev_num, q=q if q else None) }}{% else %}#{% endif %}"
                aria-label="Anterior">
                 <i class="fa-solid fa-chevron-left"></i>
             </a>
@@ -204,7 +239,7 @@
             {% if p_num %}
                 <li class="page-item {% if p_num == paginacion.page %}active{% endif %}">
                     <a class="page-link rounded-pill px-3 shadow-sm"
-                       href="{{ url_for('inventory_bp.index', page=p_num) }}">{{ p_num }}</a>
+                       href="{{ url_for('inventory_bp.index', page=p_num, q=q if q else None) }}">{{ p_num }}</a>
                 </li>
             {% else %}
                 <li class="page-item disabled">
@@ -216,7 +251,7 @@
         <!-- Siguiente -->
         <li class="page-item {% if not paginacion.has_next %}disabled{% endif %}">
             <a class="page-link rounded-pill px-3 shadow-sm"
-               href="{% if paginacion.has_next %}{{ url_for('inventory_bp.index', page=paginacion.next_num) }}{% else %}#{% endif %}"
+               href="{% if paginacion.has_next %}{{ url_for('inventory_bp.index', page=paginacion.next_num, q=q if q else None) }}{% else %}#{% endif %}"
                aria-label="Siguiente">
                 <i class="fa-solid fa-chevron-right"></i>
             </a>
@@ -273,93 +308,259 @@
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('inventarioSearch');
     const clearBtn = document.getElementById('clearSearch');
+    const searchIcon = document.getElementById('searchIcon');
+    const searchSpinner = document.getElementById('searchSpinner');
     const dropdown = document.getElementById('searchDropdown');
-    const tableRows = document.querySelectorAll('tbody tr:not(.no-results)');
+    const searchForm = document.getElementById('searchForm');
+    const productRows = document.querySelectorAll('tbody tr.producto-fila');
     const visibleCount = document.getElementById('visibleCount');
     const tbody = document.querySelector('tbody');
 
-    // Crear fila de "No hay resultados" si no existe
-    const noResultsRow = document.createElement('tr');
-    noResultsRow.className = 'no-results d-none';
-    noResultsRow.innerHTML = `<td colspan="7" class="text-center py-5 text-muted">
-        <i class="fa-solid fa-magnifying-glass-minus fs-1 mb-3 opacity-25"></i>
-        <p class="mb-0">No se encontraron productos que coincidan con tu búsqueda.</p>
-    </td>`;
-    tbody.appendChild(noResultsRow);
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Fila para indicar "Sin resultados locales en esta página"
+    let noResultsRow = document.querySelector('.no-results-local');
+    if (!noResultsRow) {
+        noResultsRow = document.createElement('tr');
+        noResultsRow.className = 'no-results-local d-none';
+        noResultsRow.innerHTML = `<td colspan="7" class="text-center py-5 text-muted">
+            <i class="fa-solid fa-magnifying-glass-arrow-right fs-2 mb-3 text-brand-pink opacity-75"></i>
+            <p class="mb-1 fw-bold text-brand-black">No hay coincidencias en esta página actual.</p>
+            <p class="small text-muted mb-0">Presiona <strong>Enter</strong> o el botón <strong>"Buscar"</strong> para consultar en todo el catálogo de la nube.</p>
+        </td>`;
+        tbody.appendChild(noResultsRow);
+    }
 
     let debounceTimer;
 
-    function performSearch() {
-        const query = searchInput.value.toLowerCase().trim();
-        
-        // 1. Filtrado local de la tabla (lo que ya está cargado)
+    function filterLocalTable(query) {
         let matches = 0;
-        tableRows.forEach(row => {
-            const sku = row.cells[0].textContent.toLowerCase();
-            const nombre = row.cells[1].textContent.toLowerCase();
-            if (sku.includes(query) || nombre.includes(query)) {
+        productRows.forEach(row => {
+            const sku = row.dataset.sku || '';
+            const nombre = row.dataset.nombre || '';
+            const variantes = row.dataset.variantes || '';
+            const id = row.dataset.id;
+            const collapseRow = document.getElementById(`collapseVariantes${id}`);
+
+            if (!query) {
                 row.classList.remove('d-none');
                 matches++;
+                return;
+            }
+
+            const matchProduct = sku.includes(query) || nombre.includes(query);
+            const matchVariant = variantes.includes(query);
+
+            if (matchProduct || matchVariant) {
+                row.classList.remove('d-none');
+                matches++;
+                // Si la coincidencia fue por variante / subcategoría, desplegamos automáticamente el acordeón
+                if (matchVariant && collapseRow && !collapseRow.classList.contains('show')) {
+                    const bsCollapse = new bootstrap.Collapse(collapseRow, { toggle: false });
+                    bsCollapse.show();
+                }
             } else {
                 row.classList.add('d-none');
+                if (collapseRow && collapseRow.classList.contains('show')) {
+                    const bsCollapse = bootstrap.Collapse.getInstance(collapseRow);
+                    if (bsCollapse) bsCollapse.hide();
+                }
             }
         });
-        visibleCount.textContent = matches;
-        if (matches === 0 && query !== '') noResultsRow.classList.remove('d-none');
-        else noResultsRow.classList.add('d-none');
 
-        // 2. Búsqueda AJAX global para el "despliegue"
+        if (visibleCount) {
+            visibleCount.textContent = matches;
+        }
+
+        if (matches === 0 && query !== '') {
+            noResultsRow.classList.remove('d-none');
+        } else {
+            noResultsRow.classList.add('d-none');
+        }
+    }
+
+    function searchGlobal(query) {
         clearTimeout(debounceTimer);
-        if (query.length < 2) {
+        if (!query || query.length < 1) {
             dropdown.classList.add('d-none');
+            dropdown.classList.remove('show');
+            if (searchSpinner) searchSpinner.classList.add('d-none');
+            if (searchIcon) searchIcon.classList.remove('d-none');
             return;
         }
+
+        if (searchSpinner) searchSpinner.classList.remove('d-none');
+        if (searchIcon) searchIcon.classList.add('d-none');
 
         debounceTimer = setTimeout(() => {
             fetch(`/inventory/api/search?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.length > 0) {
-                        dropdown.innerHTML = '';
+                    if (searchSpinner) searchSpinner.classList.add('d-none');
+                    if (searchIcon) searchIcon.classList.remove('d-none');
+
+                    dropdown.innerHTML = '';
+
+                    if (data && data.length > 0) {
+                        const header = document.createElement('div');
+                        header.className = 'px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center';
+                        header.innerHTML = `
+                            <small class="text-muted fw-bold text-uppercase" style="font-size:0.75rem;">
+                                <i class="fa-solid fa-bolt text-warning me-1"></i> Resultados rápidos (${data.length})
+                            </small>
+                            <small class="text-muted" style="font-size:0.75rem;">Enter para filtrar tabla</small>
+                        `;
+                        dropdown.appendChild(header);
+
                         data.forEach(item => {
-                            const btn = document.createElement('a');
-                            btn.href = item.url;
-                            btn.className = 'dropdown-item p-3 border-bottom d-flex justify-content-between align-items-center';
-                            btn.innerHTML = `
-                                <div>
-                                    <div class="fw-bold text-dark text-truncate" style="max-width: 250px;">${item.nombre}</div>
-                                    <small class="text-muted">SKU: ${item.sku}</small>
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'dropdown-item p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap';
+                            itemDiv.style.whiteSpace = 'normal';
+
+                            // Badges de variantes
+                            let variantesHtml = '';
+                            if (item.variantes && item.variantes.length > 0) {
+                                variantesHtml = '<div class="mt-1 d-flex flex-wrap gap-1">';
+                                item.variantes.slice(0, 4).forEach(v => {
+                                    const isMatch = v.matches;
+                                    const badgeClass = isMatch ? 'bg-warning text-dark border border-warning fw-bold' : 'bg-light text-muted border';
+                                    variantesHtml += `<span class="badge ${badgeClass}" style="font-size: 0.72rem;">${escapeHtml(v.nombre)} (${v.stock})</span>`;
+                                });
+                                if (item.variantes.length > 4) {
+                                    variantesHtml += `<span class="badge bg-light text-muted border" style="font-size: 0.72rem;">+${item.variantes.length - 4} más</span>`;
+                                }
+                                variantesHtml += '</div>';
+                            }
+
+                            const stockBadge = item.stock <= 3 
+                                ? `<span class="badge bg-danger rounded-pill px-2 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>${item.stock} uds</span>`
+                                : `<span class="badge bg-brand-pink text-dark border rounded-pill px-2 py-1">${item.stock} uds</span>`;
+
+                            itemDiv.innerHTML = `
+                                <div class="me-2" style="max-width: 70%;">
+                                    <div class="fw-bold text-brand-black" style="font-size: 0.95rem;">${escapeHtml(item.nombre)}</div>
+                                    <div class="small text-muted">
+                                        <span class="badge bg-light text-dark border me-1">SKU: ${escapeHtml(item.sku)}</span>
+                                        ${item.precio_sugerido ? `<span class="text-success fw-semibold">$${Number(item.precio_sugerido).toLocaleString('es-CO')}</span>` : ''}
+                                    </div>
+                                    ${variantesHtml}
                                 </div>
-                                <span class="badge bg-light text-dark border rounded-pill">${item.stock} uds</span>
+                                <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+                                    ${stockBadge}
+                                    <a href="${item.url_ver}" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 shadow-sm" title="Ver detalle">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    <a href="${item.url_editar}" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 shadow-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                </div>
                             `;
-                            dropdown.appendChild(btn);
+
+                            itemDiv.addEventListener('click', function(e) {
+                                if (!e.target.closest('a') && !e.target.closest('button')) {
+                                    window.location.href = item.url_ver;
+                                }
+                            });
+
+                            dropdown.appendChild(itemDiv);
                         });
+
+                        // Botón de pie para ver todos los resultados en la tabla
+                        const footer = document.createElement('div');
+                        footer.className = 'p-2 bg-light text-center border-top';
+                        footer.innerHTML = `
+                            <button type="button" class="btn btn-sm text-brand-pink fw-bold w-100 py-1" id="btnVerTodosDropdown">
+                                <i class="fa-solid fa-list-check me-1"></i> Ver todos los resultados filtrados en la tabla &rarr;
+                            </button>
+                        `;
+                        dropdown.appendChild(footer);
+
+                        footer.querySelector('#btnVerTodosDropdown').addEventListener('click', () => {
+                            searchForm.submit();
+                        });
+
                         dropdown.classList.remove('d-none');
                         dropdown.classList.add('show');
                     } else {
-                        dropdown.classList.add('d-none');
-                        dropdown.classList.remove('show');
+                        dropdown.innerHTML = `
+                            <div class="p-4 text-center text-muted">
+                                <i class="fa-solid fa-box-open text-brand-pink fs-3 mb-2"></i>
+                                <p class="mb-0 small fw-semibold">No se encontraron productos para "<strong>${escapeHtml(query)}</strong>".</p>
+                            </div>
+                        `;
+                        dropdown.classList.remove('d-none');
+                        dropdown.classList.add('show');
                     }
+                })
+                .catch(err => {
+                    console.error('Error buscando productos:', err);
+                    if (searchSpinner) searchSpinner.classList.add('d-none');
+                    if (searchIcon) searchIcon.classList.remove('d-none');
                 });
-        }, 300);
+        }, 250);
     }
 
-    searchInput.addEventListener('input', performSearch);
+    function handleInput() {
+        const query = searchInput.value.toLowerCase().trim();
 
-    // Ocultar dropdown al hacer click fuera
-    document.addEventListener('click', (e) => {
+        // Control del botón limpiar
+        if (query.length > 0) {
+            clearBtn.classList.remove('d-none');
+        } else {
+            clearBtn.classList.add('d-none');
+        }
+
+        // 1. Filtrado instantáneo local en la tabla
+        filterLocalTable(query);
+
+        // 2. Búsqueda global con autocompletado en toda la base de datos
+        searchGlobal(query);
+    }
+
+    searchInput.addEventListener('input', handleInput);
+
+    searchInput.addEventListener('focus', function() {
+        const query = searchInput.value.toLowerCase().trim();
+        if (query.length >= 1 && dropdown.children.length > 0) {
+            dropdown.classList.remove('d-none');
+            dropdown.classList.add('show');
+        }
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            dropdown.classList.add('d-none');
+            dropdown.classList.remove('show');
+        }
+    });
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', function(e) {
         if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
             dropdown.classList.add('d-none');
             dropdown.classList.remove('show');
         }
     });
 
-    clearBtn.addEventListener('click', () => {
+    // Botón para limpiar búsqueda
+    clearBtn.addEventListener('click', function() {
         searchInput.value = '';
-        performSearch();
+        clearBtn.classList.add('d-none');
         dropdown.classList.add('d-none');
         dropdown.classList.remove('show');
-        searchInput.focus();
+
+        // Si la página vino filtrada por el servidor (?q=...), recargar limpio
+        if (window.location.search.includes('q=')) {
+            window.location.href = "{{ url_for('inventory_bp.index') }}";
+        } else {
+            filterLocalTable('');
+            searchInput.focus();
+        }
     });
 });
 </script>

@@ -15,10 +15,23 @@ inventory_bp = Blueprint('inventory_bp', __name__)
 def index():
     tipo = 'bodega' if current_user.rol == 'bodega' else 'tienda'
     page = request.args.get('page', 1, type=int)
+    q = request.args.get('q', '').strip()
     per_page = 20
 
+    base_query = Product.query.filter_by(tipo_inventario=tipo)
+    if q:
+        from sqlalchemy import or_
+        base_query = base_query.filter(
+            or_(
+                Product.sku.ilike(f'%{q}%'),
+                Product.nombre.ilike(f'%{q}%'),
+                Product.observacion.ilike(f'%{q}%'),
+                Product.variantes.any(ProductVariant.nombre_variante.ilike(f'%{q}%'))
+            )
+        )
+
     # Paginación del listado principal
-    paginacion = Product.query.filter_by(tipo_inventario=tipo).order_by(Product.nombre).paginate(
+    paginacion = base_query.order_by(Product.nombre).paginate(
         page=page, per_page=per_page, error_out=False
     )
     productos = paginacion.items
@@ -55,7 +68,8 @@ def index():
         total_productos=total_productos,
         valor_costo=valor_costo,
         valor_sugerido=valor_sugerido,
-        total_unidades_fisicas=total_unidades_fisicas
+        total_unidades_fisicas=total_unidades_fisicas,
+        q=q
     )
 
 @inventory_bp.route('/nuevo', methods=['GET', 'POST'])
@@ -747,25 +761,41 @@ def api_search():
     query = request.args.get('q', '').strip()
     tipo = 'bodega' if current_user.rol == 'bodega' else 'tienda'
     
-    if len(query) < 2:
+    if len(query) < 1:
         return jsonify([])
     
     from sqlalchemy import or_
     productos = Product.query.filter_by(tipo_inventario=tipo).filter(
         or_(
             Product.sku.ilike(f'%{query}%'),
-            Product.nombre.ilike(f'%{query}%')
+            Product.nombre.ilike(f'%{query}%'),
+            Product.observacion.ilike(f'%{query}%'),
+            Product.variantes.any(ProductVariant.nombre_variante.ilike(f'%{query}%'))
         )
-    ).limit(10).all()
+    ).limit(15).all()
     
     results = []
+    q_lower = query.lower()
     for p in productos:
+        variantes_list = []
+        if p.variantes:
+            for v in p.variantes:
+                variantes_list.append({
+                    'id': v.id,
+                    'nombre': v.nombre_variante,
+                    'stock': v.cantidad_stock or 0,
+                    'matches': q_lower in v.nombre_variante.lower()
+                })
         results.append({
             'id': p.id,
             'sku': p.sku,
             'nombre': p.nombre,
             'stock': p.total_stock,
-            'url': url_for('inventory_bp.ver_producto', id=p.id)
+            'precio_sugerido': float(p.precio_sugerido or 0),
+            'variantes': variantes_list,
+            'url_ver': url_for('inventory_bp.ver_producto', id=p.id),
+            'url_editar': url_for('inventory_bp.editar_producto', id=p.id)
         })
     
     return jsonify(results)
+
