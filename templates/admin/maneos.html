@@ -222,7 +222,13 @@
                 {% for m in maneos %}
                 <tr>
                     <td class="ps-4 text-center fw-bold text-brand-blue">{{ m.cantidad }} uds</td>
-                    <td class="text-center fw-bold text-success">${{ '{:,.0f}'.format(m.cantidad * (m.valor_fijo if m.valor_fijo else (m.variante.precio_sugerido if m.variante else m.producto.precio_sugerido))) }}</td>
+                    <td class="text-center fw-bold text-success">
+                        {% set precio_unit = (m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else (m.variante.precio_sugerido if m.variante else m.producto.precio_sugerido) %}
+                        ${{ '{:,.0f}'.format(m.cantidad * precio_unit) }}
+                        {% if m.valor_fijo %}
+                            <br><small class="text-muted fw-normal" style="font-size: 0.75rem;">(${{ '{:,.0f}'.format(precio_unit) }} c/u)</small>
+                        {% endif %}
+                    </td>
                     <td class="fw-bold text-brand-black"><i class="fa-solid fa-store text-muted me-2"></i>{{ m.local_vecino }}</td>
                     <td>
                         <span class="text-brand-black fw-semibold">{{ m.producto.nombre }}</span> <small class="text-muted">({{ m.producto.sku }})</small>
@@ -275,7 +281,7 @@
                                                             <label class="form-label fw-bold">Precio Unitario</label>
                                                             <div class="input-group">
                                                                 <span class="input-group-text border-0 bg-light text-success fw-bold">$</span>
-                                                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
+                                                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
                                                             </div>
                                                         </div>
                                                     </div>

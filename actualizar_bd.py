@@ -37,6 +37,13 @@ def main():
                 db.session.rollback()
                 print(f"[Aviso] {sql} -> {e}")
 
+        # 3. Ajustar valores antiguos registrados con números abreviados (ej: 30 -> 30000)
+        try:
+            db.session.execute(db.text("UPDATE maneos SET valor_fijo = valor_fijo * 1000 WHERE valor_fijo > 0 AND valor_fijo < 1000;"))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+
         print("✅ Base de datos actualizada y todas las columnas sincronizadas correctamente.")
 
 if __name__ == '__main__':
