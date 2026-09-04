@@ -92,6 +92,7 @@
                     </div>
                     <div class="col-3">
                         <label class="form-label fw-bold text-brand-black mb-0">Valor (Und)</label>
+                        <small class="text-success d-block fw-semibold" style="font-size: 0.7rem; line-height: 1.1;">(Ej: 5 = $5.000 | 15 = $15.000)</small>
                     </div>
                     <div class="col-7">
                         <label class="form-label fw-bold text-brand-black mb-0">Producto a Prestar / Entregar (SKU)</label>
@@ -106,7 +107,7 @@
                             <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
@@ -132,7 +133,7 @@
                             <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
@@ -158,7 +159,7 @@
                             <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
@@ -388,7 +389,7 @@
             if (val < 1000) {
                 finalVal = val * 1000;
             }
-            preview.innerHTML = `<i class="fa-solid fa-tag me-1"></i>$${finalVal.toLocaleString('es-CO')} COP`;
+            preview.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i>$${finalVal.toLocaleString('es-CO')} COP`;
         } else {
             preview.textContent = '';
         }
@@ -481,6 +482,16 @@
         valorInput.addEventListener('input', function() {
             updateValorPreview(valorInput);
         });
+
+        // Al salir del campo (blur): Si puso 5, 7, 10, 15, 30 (< 1000), convertir inmediatamente a miles en la casilla
+        valorInput.addEventListener('blur', function() {
+            const val = parseFloat(valorInput.value);
+            if (!isNaN(val) && val > 0 && val < 1000) {
+                valorInput.value = Math.round(val * 1000);
+            }
+            updateValorPreview(valorInput);
+        });
+
         valorInput.addEventListener('change', function() {
             updateValorPreview(valorInput);
         });
@@ -515,7 +526,7 @@
                 <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
             </div>
             <div class="col-3">
-                <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
                 <div class="valor-preview-badge mt-1 ps-1"></div>
             </div>
             <div class="col-7">
@@ -559,11 +570,20 @@
         rows.forEach(row => {
             const skuVal = row.querySelector('.sku-input').value.trim();
             const cantInput = row.querySelector('.cantidad-input');
+            const valInput = row.querySelector('.valor-input');
+
             if (skuVal.length > 0) {
                 productosValidos++;
                 // Si especificó SKU pero dejó cantidad vacía, asignar 1 por defecto
                 if (!cantInput.value || parseInt(cantInput.value) <= 0) {
                     cantInput.value = '1';
+                }
+                // Si el valor ingresado es menor a 1000 (ej: 5, 7, 10, 15, 30), convertir a miles
+                if (valInput && valInput.value) {
+                    const num = parseFloat(valInput.value);
+                    if (!isNaN(num) && num > 0 && num < 1000) {
+                        valInput.value = Math.round(num * 1000);
+                    }
                 }
             }
         });

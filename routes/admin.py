@@ -283,6 +283,8 @@ def maneos_facturar(id):
         precio_minimo_ref = float(maneo.producto.precio_minimo)
 
     precio_venta = float(request.form.get('precio_venta', precio_sugerido_ref))
+    if 0 < precio_venta < 1000:
+        precio_venta = precio_venta * 1000
     cantidad_vendida = int(request.form.get('cantidad_vendida', maneo.cantidad))
 
     if cantidad_vendida <= 0 or cantidad_vendida > maneo.cantidad:
