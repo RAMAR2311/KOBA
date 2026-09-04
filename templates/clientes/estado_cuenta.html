@@ -177,58 +177,6 @@
                                         </button>
                                     </form>
                                 </div>
-
-                                <!-- Modal Facturar Específico -->
-                                <div class="modal fade text-start" id="modalFacturar{{ m.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow">
-                                            <div class="modal-header border-0 bg-light">
-                                                <h5 class="modal-title fw-bold text-brand-black">
-                                                    <i class="fa-solid fa-cash-register text-success me-2"></i>Cobrar / Facturar Maneo
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input type="hidden" name="origen" value="estado_cuenta">
-                                                <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
-
-                                                <div class="modal-body p-4">
-                                                    <div class="bg-light p-3 rounded-3 mb-3">
-                                                        <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
-                                                        {% if m.variante %}
-                                                            <small class="text-muted d-block">Subcategoría: {{ m.variante.nombre_variante }}</small>
-                                                        {% endif %}
-                                                        <div class="small text-muted mt-1">Cantidad a facturar: <strong>{{ m.cantidad }} unidades</strong></div>
-                                                    </div>
-
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold">Precio de Venta Unitario ($)</label>
-                                                        <input type="number" step="any" name="precio_venta" class="form-control" value="{{ '%.0f'|format(m.valor_unitario_calculado) }}" required>
-                                                        <small class="text-muted">Valor sugerido / acordado en el maneo.</small>
-                                                    </div>
-
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold">Método de Pago Recibido</label>
-                                                        <select name="metodo_pago" class="form-select">
-                                                            <option value="efectivo">Efectivo</option>
-                                                            <option value="nequi">Nequi</option>
-                                                            <option value="daviplata">Daviplata</option>
-                                                            <option value="tarjeta">Tarjeta / Datafono</option>
-                                                            <option value="transferencia">Transferencia Bancaria</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0 bg-light">
-                                                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
-                                                        <i class="fa-solid fa-check me-1"></i> Confirmar Cobro
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -349,6 +297,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Modales para Cobro / Facturación de Maneos Activos -->
+{% for m in maneos_activos %}
+<div class="modal fade" id="modalFacturar{{ m.id }}" tabindex="-1" aria-labelledby="modalFacturarLabel{{ m.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold text-brand-black" id="modalFacturarLabel{{ m.id }}">
+                    <i class="fa-solid fa-cash-register text-success me-2"></i>Cobrar / Facturar Maneo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="origen" value="estado_cuenta">
+                <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+
+                <div class="modal-body p-4">
+                    <div class="bg-light p-3 rounded-3 mb-3">
+                        <div class="fw-bold text-brand-black fs-6">{{ m.producto.nombre }}</div>
+                        {% if m.variante %}
+                            <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</small>
+                        {% endif %}
+                        <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Cantidad a Cobrar <span class="text-danger">*</span></label>
+                            <input type="number" name="cantidad_vendida" class="form-control" value="{{ m.cantidad }}" min="1" max="{{ m.cantidad }}" required>
+                            <small class="text-muted" style="font-size:0.75rem;">Total prestadas: {{ m.cantidad }}</small>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Precio Unitario ($) <span class="text-danger">*</span></label>
+                            <input type="number" step="any" name="precio_venta" class="form-control" value="{{ '%.0f'|format(m.valor_unitario_calculado) }}" required>
+                            <small class="text-muted" style="font-size:0.75rem;">Valor acordado</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Método de Pago Recibido</label>
+                        <select name="metodo_pago" class="form-select">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="nequi">Nequi</option>
+                            <option value="daviplata">Daviplata</option>
+                            <option value="tarjeta">Tarjeta / Datáfono</option>
+                            <option value="transferencia">Transferencia Bancaria</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Cobro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <style>
 @media print {

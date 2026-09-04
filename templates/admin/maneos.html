@@ -387,8 +387,51 @@
     </div>
 </div>
 
+<!-- Modal Rápido para Crear Cliente / Local -->
+<div class="modal fade" id="modalCrearClienteRapido" tabindex="-1" aria-labelledby="modalCrearClienteRapidoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold text-brand-black" id="modalCrearClienteRapidoLabel">
+                    <i class="fa-solid fa-store text-brand-blue me-2"></i>Registrar Nuevo Local / Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formCrearClienteRapido" onsubmit="return false;">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre del Local o Persona <span class="text-danger">*</span></label>
+                        <input type="text" id="rapidoNombre" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex, Don Carlos" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Local / Puesto</label>
+                            <input type="text" id="rapidoLocal" class="form-control bg-light border-0" placeholder="Ej: Local 102">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">WhatsApp / Teléfono</label>
+                            <input type="text" id="rapidoTelefono" class="form-control bg-light border-0" placeholder="Ej: 3123456789">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Persona Encargada</label>
+                        <input type="text" id="rapidoContacto" class="form-control bg-light border-0" placeholder="Ej: Alexander Gómez">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm" id="btnGuardarClienteRapido">
+                        <i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Script para gestión de filas múltiples y subcategorías dinámicas -->
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     const filasContainer = document.getElementById('filasManeosContainer');
     const btnAgregarFila = document.getElementById('btnAgregarFila');
     const formNuevoManeo = document.getElementById('formNuevoManeo');
@@ -629,41 +672,52 @@
     });
 
     // AJAX para crear cliente rápido desde el modal
-    const formRapido = document.getElementById('formCrearClienteRapido');
-    if (formRapido) {
-        formRapido.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const nombre = document.getElementById('rapidoNombre').value.trim();
-            const local = document.getElementById('rapidoLocal').value.trim();
-            const telefono = document.getElementById('rapidoTelefono').value.trim();
-            const contacto = document.getElementById('rapidoContacto').value.trim();
+    function ejecutarGuardadoClienteRapido() {
+        const nombreInput = document.getElementById('rapidoNombre');
+        const localInput = document.getElementById('rapidoLocal');
+        const telInput = document.getElementById('rapidoTelefono');
+        const contactoInput = document.getElementById('rapidoContacto');
 
-            if (!nombre) return;
+        const nombre = nombreInput ? nombreInput.value.trim() : '';
+        const local = localInput ? localInput.value.trim() : '';
+        const telefono = telInput ? telInput.value.trim() : '';
+        const contacto = contactoInput ? contactoInput.value.trim() : '';
 
-            const btnSubmit = document.getElementById('btnGuardarClienteRapido');
+        if (!nombre) {
+            alert('Por favor, ingresa el nombre del local o persona.');
+            if (nombreInput) nombreInput.focus();
+            return;
+        }
+
+        const btnSubmit = document.getElementById('btnGuardarClienteRapido');
+        if (btnSubmit) {
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+        }
 
-            fetch("{{ url_for('clientes_bp.api_crear_rapido') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    nombre: nombre,
-                    local_numero: local,
-                    telefono: telefono,
-                    contacto_persona: contacto
-                })
+        fetch("{{ url_for('clientes_bp.api_crear_rapido') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                nombre: nombre,
+                local_numero: local,
+                telefono: telefono,
+                contacto_persona: contacto
             })
-            .then(res => res.json())
-            .then(data => {
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnSubmit) {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar';
+            }
 
-                if (data.success) {
-                    const select = document.getElementById('clienteSelectManeo');
+            if (data.success && data.cliente) {
+                const select = document.getElementById('clienteSelectManeo');
+                if (select) {
                     let opt = select.querySelector(`option[value="${data.cliente.id}"]`);
                     if (!opt) {
                         opt = document.createElement('option');
@@ -672,64 +726,46 @@
                         select.appendChild(opt);
                     }
                     select.value = data.cliente.id;
+                    select.dispatchEvent(new Event('change'));
+                }
 
-                    const modalEl = document.getElementById('modalCrearClienteRapido');
+                const modalEl = document.getElementById('modalCrearClienteRapido');
+                if (modalEl) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                     modalInst.hide();
-                    formRapido.reset();
-                } else {
-                    alert(data.message || 'Error al registrar el cliente');
                 }
-            })
-            .catch(err => {
-                console.error(err);
+
+                const formRapido = document.getElementById('formCrearClienteRapido');
+                if (formRapido) formRapido.reset();
+            } else {
+                alert(data.message || 'Error al registrar el cliente');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            if (btnSubmit) {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar';
-                alert('Ocurrió un problema de comunicación al guardar.');
-            });
+            }
+            alert('Ocurrió un problema de comunicación al guardar.');
         });
     }
-</script>
 
-<!-- Modal Rápido para Crear Cliente / Local -->
-<div class="modal fade" id="modalCrearClienteRapido" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-bold text-brand-black">
-                    <i class="fa-solid fa-store text-brand-blue me-2"></i>Registrar Nuevo Local / Cliente
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formCrearClienteRapido">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre del Local o Persona <span class="text-danger">*</span></label>
-                        <input type="text" id="rapidoNombre" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex, Don Carlos" required>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold">Local / Puesto</label>
-                            <input type="text" id="rapidoLocal" class="form-control bg-light border-0" placeholder="Ej: Local 102">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold">WhatsApp / Teléfono</label>
-                            <input type="text" id="rapidoTelefono" class="form-control bg-light border-0" placeholder="Ej: 3123456789">
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-bold">Persona Encargada</label>
-                        <input type="text" id="rapidoContacto" class="form-control bg-light border-0" placeholder="Ej: Alexander Gómez">
-                    </div>
-                </div>
-                <div class="modal-footer border-0 bg-light">
-                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm" id="btnGuardarClienteRapido">
-                        <i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+    const btnGuardarClienteRapido = document.getElementById('btnGuardarClienteRapido');
+    if (btnGuardarClienteRapido) {
+        btnGuardarClienteRapido.addEventListener('click', function(e) {
+            e.preventDefault();
+            ejecutarGuardadoClienteRapido();
+        });
+    }
+
+    const formRapido = document.getElementById('formCrearClienteRapido');
+    if (formRapido) {
+        formRapido.addEventListener('submit', function(e) {
+            e.preventDefault();
+            ejecutarGuardadoClienteRapido();
+        });
+    }
+});
+</script>
 {% endblock %}

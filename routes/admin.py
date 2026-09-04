@@ -295,34 +295,55 @@ def maneos_prestar():
 @login_required
 def maneos_facturar(id):
     maneo = Maneo.query.get_or_404(id)
+    origen = request.form.get('origen', '')
+    cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
+
+    def _redirigir():
+        if origen == 'estado_cuenta' and cliente_redirect_id:
+            return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
+        return redirect(url_for('admin_bp.maneos'))
+
     if maneo.estado != 'PENDIENTE':
         flash('Este maneo ya fue resuelto.', 'warning')
-        return redirect(url_for('admin_bp.maneos'))
+        return _redirigir()
     
     # Determinar precios según variante o producto base
     if maneo.variante:
-        precio_sugerido_ref = float(maneo.variante.precio_sugerido or maneo.producto.precio_sugerido)
-        precio_costo_ref = float(maneo.variante.precio_costo or maneo.producto.precio_costo)
-        precio_minimo_ref = float(maneo.variante.precio_minimo or maneo.producto.precio_minimo)
+        precio_sugerido_ref = float(maneo.variante.precio_sugerido or maneo.producto.precio_sugerido or 0)
+        precio_costo_ref = float(maneo.variante.precio_costo or maneo.producto.precio_costo or 0)
+        precio_minimo_ref = float(maneo.variante.precio_minimo or maneo.producto.precio_minimo or 0)
     else:
-        precio_sugerido_ref = float(maneo.producto.precio_sugerido)
-        precio_costo_ref = float(maneo.producto.precio_costo)
-        precio_minimo_ref = float(maneo.producto.precio_minimo)
+        precio_sugerido_ref = float(maneo.producto.precio_sugerido or 0)
+        precio_costo_ref = float(maneo.producto.precio_costo or 0)
+        precio_minimo_ref = float(maneo.producto.precio_minimo or 0)
 
-    precio_venta = float(request.form.get('precio_venta', precio_sugerido_ref))
+    try:
+        raw_pv = request.form.get('precio_venta')
+        precio_venta = float(raw_pv) if raw_pv and str(raw_pv).strip() else float(maneo.valor_unitario_calculado or precio_sugerido_ref)
+    except (ValueError, TypeError):
+        precio_venta = float(maneo.valor_unitario_calculado or precio_sugerido_ref)
+
     if 0 < precio_venta < 1000:
         precio_venta = precio_venta * 1000
-    cantidad_vendida = int(request.form.get('cantidad_vendida', maneo.cantidad))
+
+    try:
+        raw_cant = request.form.get('cantidad_vendida')
+        cantidad_vendida = int(raw_cant) if raw_cant and str(raw_cant).strip() else maneo.cantidad
+    except (ValueError, TypeError):
+        cantidad_vendida = maneo.cantidad
 
     if cantidad_vendida <= 0 or cantidad_vendida > maneo.cantidad:
         flash(f'Operación rechazada: La cantidad vendida ({cantidad_vendida}) es inválida.', 'danger')
-        return redirect(url_for('admin_bp.maneos'))
+        return _redirigir()
 
     precio_limite = precio_costo_ref if current_user.rol == 'admin' else precio_minimo_ref
 
-    if float(precio_venta) < float(precio_limite):
-        flash(f'Operación rechazada: El precio ingresado (${precio_venta}) es menor al límite autorizado para tu perfil de usuario (${precio_limite}).', 'danger')
-        return redirect(url_for('admin_bp.maneos'))
+    # Si el maneo tiene un valor_fijo asignado y el cobro es >= a ese valor acordado, permitirlo (precio especial pactado con el local vecino)
+    es_precio_pactado = (maneo.valor_fijo is not None and float(precio_venta) >= float(maneo.valor_fijo))
+
+    if not es_precio_pactado and float(precio_venta) < float(precio_limite):
+        flash(f'Operación rechazada: El precio ingresado (${precio_venta:,.0f}) es menor al límite autorizado para tu perfil de usuario (${precio_limite:,.0f}).', 'danger')
+        return _redirigir()
 
     try:
         cantidad_no_vendida = maneo.cantidad - cantidad_vendida
@@ -385,34 +406,44 @@ def maneos_facturar(id):
         db.session.commit()
 
         if cantidad_no_vendida > 0:
-            flash(f'Maneo facturado parcialmente. Se registró la venta de ${precio_venta * cantidad_vendida} y se devolvieron {cantidad_no_vendida} uds al inventario.', 'success')
+            flash(f'Maneo facturado parcialmente. Se registró la venta de ${precio_venta * cantidad_vendida:,.0f} y se devolvieron {cantidad_no_vendida} uds al inventario.', 'success')
         else:
-            flash(f'Maneo facturado totalmente. Se registró la venta de ${precio_venta * cantidad_vendida} en la caja.', 'success')
+            flash(f'Maneo facturado totalmente. Se registró la venta de ${precio_venta * cantidad_vendida:,.0f} en la caja.', 'success')
     except Exception as e:
         db.session.rollback()
-        origen = request.form.get('origen', '')
-        cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
-        if origen == 'estado_cuenta' and cliente_redirect_id:
-            return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
-        return redirect(url_for('admin_bp.maneos'))
+        flash(f'Error al facturar el maneo: {str(e)}', 'danger')
+
+    return _redirigir()
 
 @admin_bp.route('/maneos/devolver/<int:id>', methods=['POST'])
 @login_required
 def maneos_devolver(id):
     maneo = Maneo.query.get_or_404(id)
-    if maneo.estado != 'PENDIENTE':
-        flash('Este maneo ya fue resuelto.', 'warning')
+    origen = request.form.get('origen', '')
+    cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
+
+    def _redirigir():
+        if origen == 'estado_cuenta' and cliente_redirect_id:
+            return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
         return redirect(url_for('admin_bp.maneos'))
 
-    cantidad_devuelta = int(request.form.get('cantidad_devuelta', maneo.cantidad))
+    if maneo.estado != 'PENDIENTE':
+        flash('Este maneo ya fue resuelto.', 'warning')
+        return _redirigir()
+
+    try:
+        raw_cant = request.form.get('cantidad_devuelta')
+        cantidad_devuelta = int(raw_cant) if raw_cant and str(raw_cant).strip() else maneo.cantidad
+    except (ValueError, TypeError):
+        cantidad_devuelta = maneo.cantidad
 
     if cantidad_devuelta <= 0:
         flash('La cantidad a devolver debe ser mayor a 0.', 'danger')
-        return redirect(url_for('admin_bp.maneos'))
+        return _redirigir()
 
     if cantidad_devuelta > maneo.cantidad:
         flash(f'No puedes devolver más de {maneo.cantidad} unidades (las que están prestadas).', 'danger')
-        return redirect(url_for('admin_bp.maneos'))
+        return _redirigir()
 
     try:
         # Devolver stock a la variante o al producto base
@@ -453,13 +484,9 @@ def maneos_devolver(id):
 
     except Exception as e:
         db.session.rollback()
-        flash('Error al procesar la devolución.', 'danger')
+        flash(f'Error al procesar la devolución: {str(e)}', 'danger')
 
-    origen = request.form.get('origen', '')
-    cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
-    if origen == 'estado_cuenta' and cliente_redirect_id:
-        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
-    return redirect(url_for('admin_bp.maneos'))
+    return _redirigir()
 
 @admin_bp.route('/balance-financiero', methods=['GET', 'POST'])
 @login_required
