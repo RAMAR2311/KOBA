@@ -129,76 +129,138 @@ def maneos():
 @admin_bp.route('/maneos/prestar', methods=['POST'])
 @login_required
 def maneos_prestar():
-    sku = request.form.get('sku')
-    cantidad = int(request.form.get('cantidad', 0))
-    local_vecino = request.form.get('local_vecino')
-    variant_id_str = request.form.get('variant_id')
-    valor_fijo_str = request.form.get('valor_fijo')
-
-    if not sku:
-        flash('Asegúrate de escanear o ingresar un SKU válido.', 'danger')
+    local_vecino = request.form.get('local_vecino', '').strip()
+    if not local_vecino:
+        flash('Debes indicar el Local Vecino o Persona a quien se le presta.', 'danger')
         return redirect(url_for('admin_bp.maneos'))
 
-    producto = Product.query.filter_by(sku=sku.strip()).first()
-    if not producto:
-        flash(f'Error: El producto con SKU "{sku}" no existe en el catálogo.', 'danger')
-        return redirect(url_for('admin_bp.maneos'))
+    # Obtener listas de campos del formulario
+    skus = request.form.getlist('sku[]') or request.form.getlist('sku')
+    cantidades = request.form.getlist('cantidad[]') or request.form.getlist('cantidad')
+    valores_fijos = request.form.getlist('valor_fijo[]') or request.form.getlist('valor_fijo')
+    variant_ids = request.form.getlist('variant_id[]') or request.form.getlist('variant_id')
 
-    # Determinar si se seleccionó una variante
-    variante = None
-    if variant_id_str and variant_id_str.strip():
-        variante = ProductVariant.query.get(int(variant_id_str))
-        if not variante or variante.product_id != producto.id:
-            flash('La subcategoría seleccionada no pertenece a este producto.', 'danger')
-            return redirect(url_for('admin_bp.maneos'))
+    # Fallback si se envió como campo simple
+    if not skus and request.form.get('sku'):
+        skus = [request.form.get('sku')]
+        cantidades = [request.form.get('cantidad', '1')]
+        valores_fijos = [request.form.get('valor_fijo', '')]
+        variant_ids = [request.form.get('variant_id', '')]
+
+    items_a_procesar = []
+    for idx, raw_sku in enumerate(skus):
+        sku_str = (raw_sku or '').strip()
+        if not sku_str:
+            continue
         
-        if variante.cantidad_stock < cantidad:
-            flash(f'Stock insuficiente en la subcategoría "{variante.nombre_variante}" para prestar {cantidad} uds. (Stock actual: {variante.cantidad_stock}).', 'danger')
-            return redirect(url_for('admin_bp.maneos'))
-    else:
-        if producto.cantidad_stock < cantidad:
-            flash(f'Stock insuficiente para prestar {cantidad} unids. (Stock actual: {producto.cantidad_stock}).', 'danger')
-            return redirect(url_for('admin_bp.maneos'))
+        cant_str = cantidades[idx] if idx < len(cantidades) else ''
+        try:
+            cant = int(cant_str) if cant_str else 1
+        except ValueError:
+            cant = 1
+        if cant < 1:
+            cant = 1
 
-    try:
-        valor_fijo = float(valor_fijo_str) if valor_fijo_str and valor_fijo_str.strip() else None
-    except ValueError:
+        val_str = valores_fijos[idx] if idx < len(valores_fijos) else ''
         valor_fijo = None
+        if val_str and str(val_str).strip():
+            try:
+                clean_v = str(val_str).strip().replace('$', '').replace(' ', '')
+                if '.' in clean_v and ',' in clean_v:
+                    clean_v = clean_v.replace('.', '').replace(',', '.')
+                elif ',' in clean_v:
+                    clean_v = clean_v.replace(',', '.')
+                val_num = float(clean_v)
+                # Si el usuario ingresa un número menor a 1000 (ej: 15), se interpreta en miles ($15.000)
+                if 0 < val_num < 1000:
+                    val_num = val_num * 1000
+                valor_fijo = val_num
+            except ValueError:
+                valor_fijo = None
+
+        var_id = variant_ids[idx] if idx < len(variant_ids) else ''
+        items_a_procesar.append({
+            'sku': sku_str,
+            'cantidad': cant,
+            'valor_fijo': valor_fijo,
+            'variant_id': var_id
+        })
+
+    if not items_a_procesar:
+        flash('Debes ingresar al menos un producto a prestar.', 'warning')
+        return redirect(url_for('admin_bp.maneos'))
 
     try:
-        # Descontar stock de la variante o del producto base
-        if variante:
-            stock_anterior = variante.cantidad_stock
-            variante.cantidad_stock -= cantidad
-        else:
-            stock_anterior = producto.cantidad_stock
-            producto.cantidad_stock -= cantidad
+        registrados = 0
+        for item in items_a_procesar:
+            sku = item['sku']
+            cantidad = item['cantidad']
+            valor_fijo = item['valor_fijo']
+            variant_id_str = item['variant_id']
 
-        nuevo_maneo = Maneo(
-            product_id=producto.id,
-            variant_id=variante.id if variante else None,
-            local_vecino=local_vecino.strip(),
-            cantidad=cantidad,
-            valor_fijo=valor_fijo,
-            estado='PENDIENTE'
-        )
-        db.session.add(nuevo_maneo)
+            producto = Product.query.filter_by(sku=sku).first()
+            if not producto:
+                flash(f'Error: El producto con SKU "{sku}" no existe en el catálogo.', 'danger')
+                db.session.rollback()
+                return redirect(url_for('admin_bp.maneos'))
 
-        # Registro en el Kardex
-        ajuste = StockAdjustment(
-            product_id=producto.id,
-            admin_id=current_user.id,
-            tipo_movimiento=f'Préstamo (Maneo) a {local_vecino}' + (f' [{variante.nombre_variante}]' if variante else ''),
-            stock_anterior=stock_anterior,
-            stock_nuevo=variante.cantidad_stock if variante else producto.cantidad_stock
-        )
-        db.session.add(ajuste)
+            variante = None
+            if variant_id_str and str(variant_id_str).strip():
+                try:
+                    variante = ProductVariant.query.get(int(variant_id_str))
+                except (ValueError, TypeError):
+                    variante = None
+
+            if variante and variante.product_id != producto.id:
+                flash(f'La subcategoría seleccionada no pertenece a "{producto.nombre}".', 'danger')
+                db.session.rollback()
+                return redirect(url_for('admin_bp.maneos'))
+
+            if variante:
+                if variante.cantidad_stock < cantidad:
+                    flash(f'Stock insuficiente en "{variante.nombre_variante}" para prestar {cantidad} uds (Stock actual: {variante.cantidad_stock}).', 'danger')
+                    db.session.rollback()
+                    return redirect(url_for('admin_bp.maneos'))
+                stock_anterior = variante.cantidad_stock
+                variante.cantidad_stock -= cantidad
+                stock_nuevo = variante.cantidad_stock
+            else:
+                if producto.cantidad_stock < cantidad:
+                    flash(f'Stock insuficiente en "{producto.nombre}" para prestar {cantidad} uds (Stock actual: {producto.cantidad_stock}).', 'danger')
+                    db.session.rollback()
+                    return redirect(url_for('admin_bp.maneos'))
+                stock_anterior = producto.cantidad_stock
+                producto.cantidad_stock -= cantidad
+                stock_nuevo = producto.cantidad_stock
+
+            nuevo_maneo = Maneo(
+                product_id=producto.id,
+                variant_id=variante.id if variante else None,
+                local_vecino=local_vecino,
+                cantidad=cantidad,
+                valor_fijo=valor_fijo,
+                estado='PENDIENTE'
+            )
+            db.session.add(nuevo_maneo)
+
+            ajuste = StockAdjustment(
+                product_id=producto.id,
+                admin_id=current_user.id,
+                tipo_movimiento=f'Préstamo (Maneo) a {local_vecino}' + (f' [{variante.nombre_variante}]' if variante else ''),
+                stock_anterior=stock_anterior,
+                stock_nuevo=stock_nuevo
+            )
+            db.session.add(ajuste)
+            registrados += 1
 
         db.session.commit()
-        flash('Maneo registrado y stock descontado exitosamente.', 'success')
+        if registrados == 1:
+            flash(f'Maneo registrado y stock descontado exitosamente para {local_vecino}.', 'success')
+        else:
+            flash(f'Se registraron exitosamente {registrados} productos de maneo para {local_vecino}.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Error al registrar el maneo. Transacción revertida.', 'danger')
+        flash(f'Error al registrar el maneo: {str(e)}', 'danger')
 
     return redirect(url_for('admin_bp.maneos'))
 

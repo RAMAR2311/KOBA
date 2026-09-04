@@ -8,44 +8,196 @@
     </a>
 </div>
 
+<style>
+    .btn-add-row {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff9e6;
+        border: 1.5px solid #ffe58f;
+        border-radius: 8px;
+        color: #faad14;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-add-row:hover {
+        background-color: #fff1b8;
+        border-color: #ffd666;
+        color: #d48806;
+        transform: scale(1.05);
+    }
+    .btn-registrar-maneo {
+        background-color: #1f2937;
+        color: #20c997;
+        font-weight: 600;
+        border: none;
+        border-radius: 50rem;
+        padding: 0.65rem 1.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .btn-registrar-maneo:hover {
+        background-color: #111827;
+        color: #26e7af;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .btn-del-row {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .btn-del-row:hover {
+        color: #ef4444;
+        background-color: #fee2e2;
+    }
+    .valor-preview-badge {
+        font-size: 0.75rem;
+        color: #10b981;
+        font-weight: 600;
+        min-height: 1rem;
+    }
+</style>
+
 <!-- Formulario para Nuevo Maneo -->
 <div class="card card-custom p-4 mb-4">
     <h5 class="text-brand-black fw-bold mb-3"><i class="fa-solid fa-box-open text-brand-blue me-2"></i>Registrar Nuevo Maneo</h5>
     <form method="POST" action="{{ url_for('admin_bp.maneos_prestar') }}" id="formNuevoManeo">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <input type="hidden" name="variant_id" id="variant_id_hidden" value="">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-brand-black">Cantidad</label>
-                <input type="number" name="cantidad" class="form-control bg-light border-0" min="1" value="1" required>
+
+        <datalist id="productos_list">
+            {% for p in productos %}
+                <option value="{{ p.sku }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </datalist>
+
+        <div class="row g-3">
+            <!-- Bloque Izquierdo: Cantidad, Valor (Und), Producto SKU -->
+            <div class="col-lg-9 col-md-8">
+                <!-- Encabezados de Columnas -->
+                <div class="row g-2 mb-2">
+                    <div class="col-2">
+                        <label class="form-label fw-bold text-brand-black mb-0">Cantidad</label>
+                    </div>
+                    <div class="col-3">
+                        <label class="form-label fw-bold text-brand-black mb-0">Valor (Und)</label>
+                    </div>
+                    <div class="col-7">
+                        <label class="form-label fw-bold text-brand-black mb-0">Producto a Prestar / Entregar (SKU)</label>
+                    </div>
+                </div>
+
+                <!-- Contenedor Dinámico de Filas (Mínimo 3 filas) -->
+                <div id="filasManeosContainer">
+                    <!-- Fila 1 -->
+                    <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="0">
+                        <div class="col-2">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                        </div>
+                        <div class="col-3">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <div class="valor-preview-badge mt-1 ps-1"></div>
+                        </div>
+                        <div class="col-7">
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <!-- Selector dinámico de subcategoría -->
+                            <div class="variant-container mt-1" style="display: none;">
+                                <select name="variant_id[]" class="form-select form-select-sm bg-light border-0 variant-select">
+                                    <option value="">— Producto general —</option>
+                                </select>
+                                <small class="text-muted variant-stock-info"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 2 -->
+                    <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="1">
+                        <div class="col-2">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                        </div>
+                        <div class="col-3">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <div class="valor-preview-badge mt-1 ps-1"></div>
+                        </div>
+                        <div class="col-7">
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <!-- Selector dinámico de subcategoría -->
+                            <div class="variant-container mt-1" style="display: none;">
+                                <select name="variant_id[]" class="form-select form-select-sm bg-light border-0 variant-select">
+                                    <option value="">— Producto general —</option>
+                                </select>
+                                <small class="text-muted variant-stock-info"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 3 -->
+                    <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="2">
+                        <div class="col-2">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                        </div>
+                        <div class="col-3">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                            <div class="valor-preview-badge mt-1 ps-1"></div>
+                        </div>
+                        <div class="col-7">
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <!-- Selector dinámico de subcategoría -->
+                            <div class="variant-container mt-1" style="display: none;">
+                                <select name="variant_id[]" class="form-select form-select-sm bg-light border-0 variant-select">
+                                    <option value="">— Producto general —</option>
+                                </select>
+                                <small class="text-muted variant-stock-info"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón Más (+) -->
+                <div class="mt-2">
+                    <button type="button" id="btnAgregarFila" class="btn-add-row" title="Agregar más filas">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold text-brand-black">Valor (Und)</label>
-                <input type="number" step="0.01" name="valor_fijo" class="form-control bg-light border-0" placeholder="Ej: 15000" required>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label fw-bold text-brand-black">Local Vecino / Persona</label>
-                <input type="text" name="local_vecino" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex" required>
-            </div>
-            <div class="col-md-5">
-                <label class="form-label fw-bold text-brand-black">Producto a Prestar / Entregar (SKU)</label>
-                <input type="text" name="sku" id="maneo_sku_input" list="productos_list" class="form-control bg-light border-0" autofocus placeholder="Escribe el nombre o escanea el SKU..." required>
-                <datalist id="productos_list">
-                    {% for p in productos %}
-                        <option value="{{ p.sku }}">{{ p.nombre }}</option>
-                    {% endfor %}
-                </datalist>
-            </div>
-            <!-- Selector de Subcategoría (aparece dinámicamente) -->
-            <div class="col-md-3" id="variant_selector_col" style="display: none;">
-                <label class="form-label fw-bold text-brand-black"><i class="fa-solid fa-layer-group text-primary me-1"></i>Subcategoría</label>
-                <select id="variant_selector" class="form-select bg-light border-0" onchange="onVariantChange()">
-                    <option value="">— Producto general —</option>
-                </select>
-                <small class="text-muted" id="variant_stock_info"></small>
-            </div>
-            <div class="col-md-12 mt-3 text-end">
-                <button type="submit" class="btn btn-blue px-5 rounded-pill"><i class="fa-solid fa-paper-plane me-1"></i> Registrar Maneo</button>
+
+            <!-- Bloque Derecho: Local Vecino / Persona y Botón Registrar Maneo -->
+            <div class="col-lg-3 col-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <label class="form-label fw-bold text-brand-black mb-2">Local Vecino / Persona</label>
+                    <input type="text" name="local_vecino" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex" required>
+                </div>
+                <div class="text-end mt-4 mt-md-auto pt-3">
+                    <button type="submit" class="btn btn-registrar-maneo shadow-sm">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Registrar Maneo
+                    </button>
+                </div>
             </div>
         </div>
     </form>
@@ -202,107 +354,226 @@
     </div>
 </div>
 
-<!-- Script para cargar subcategorías dinámicamente al digitar el SKU -->
+<!-- Script para gestión de filas múltiples y subcategorías dinámicas -->
 <script>
-    let debounceTimer = null;
-    const skuInput = document.getElementById('maneo_sku_input');
-    const variantCol = document.getElementById('variant_selector_col');
-    const variantSelect = document.getElementById('variant_selector');
-    const variantHidden = document.getElementById('variant_id_hidden');
-    const variantStockInfo = document.getElementById('variant_stock_info');
+    const filasContainer = document.getElementById('filasManeosContainer');
+    const btnAgregarFila = document.getElementById('btnAgregarFila');
+    const formNuevoManeo = document.getElementById('formNuevoManeo');
 
-    skuInput.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const sku = skuInput.value.trim();
-            if (sku.length > 0) {
-                buscarVariantes(sku);
-            } else {
-                ocultarVariantes();
+    function updateDeleteButtons() {
+        const rows = filasContainer.querySelectorAll('.fila-maneo');
+        rows.forEach(row => {
+            const delBtn = row.querySelector('.btn-del-row');
+            if (delBtn) {
+                if (rows.length > 3) {
+                    delBtn.classList.remove('d-none');
+                } else {
+                    delBtn.classList.add('d-none');
+                }
             }
-        }, 400);
-    });
+        });
+    }
 
-    // También al presionar Enter (por si usa escáner)
-    skuInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); // Detener el submit automático del escáner
-            const sku = skuInput.value.trim();
-            if (sku.length > 0) {
-                buscarVariantesYEnviar(sku);
-            }
+    function updateValorPreview(valorInput) {
+        const preview = valorInput.parentElement.querySelector('.valor-preview-badge');
+        if (!preview) return;
+        const valStr = valorInput.value.trim();
+        if (!valStr) {
+            preview.textContent = '';
+            return;
         }
-    });
+        const val = parseFloat(valStr);
+        if (!isNaN(val) && val > 0) {
+            let finalVal = val;
+            if (val < 1000) {
+                finalVal = val * 1000;
+            }
+            preview.innerHTML = `<i class="fa-solid fa-tag me-1"></i>$${finalVal.toLocaleString('es-CO')} COP`;
+        } else {
+            preview.textContent = '';
+        }
+    }
 
-    async function buscarVariantes(sku) {
+    async function buscarVariantesFila(sku, variantContainer, variantSelect, variantStockInfo) {
         try {
             const response = await fetch(`/sales/api/producto/${encodeURIComponent(sku)}`);
             if (!response.ok) {
-                ocultarVariantes();
+                variantContainer.style.display = 'none';
+                variantSelect.innerHTML = '<option value="">— Producto general —</option>';
+                variantStockInfo.textContent = '';
                 return;
             }
             const producto = await response.json();
 
             if (producto.variantes && producto.variantes.length > 0) {
-                mostrarSelectorVariantes(producto.variantes);
+                variantSelect.innerHTML = '<option value="">— Selecciona subcategoría —</option>';
+                producto.variantes.forEach(v => {
+                    const stockLabel = v.stock > 0 ? `(Stock: ${v.stock})` : '(Sin stock)';
+                    variantSelect.innerHTML += `<option value="${v.id}" data-stock="${v.stock}">${v.nombre} ${stockLabel}</option>`;
+                });
+                variantContainer.style.display = 'block';
             } else {
-                ocultarVariantes();
+                variantContainer.style.display = 'none';
+                variantSelect.innerHTML = '<option value="">— Producto general —</option>';
+                variantStockInfo.textContent = '';
             }
         } catch (err) {
-            ocultarVariantes();
-        }
-    }
-
-    async function buscarVariantesYEnviar(sku) {
-        try {
-            const response = await fetch(`/sales/api/producto/${encodeURIComponent(sku)}`);
-            if (!response.ok) {
-                document.getElementById('formNuevoManeo').submit();
-                return;
-            }
-            const producto = await response.json();
-
-            if (producto.variantes && producto.variantes.length > 0) {
-                // Hay variantes, NO enviamos el formulario automáticamente.
-                mostrarSelectorVariantes(producto.variantes);
-                // Enfocar el selector para que el usuario elija
-                variantSelect.focus();
-            } else {
-                // Si no tiene variantes, enviamos el formulario automáticamente
-                document.getElementById('formNuevoManeo').submit();
-            }
-        } catch(e) {
-            document.getElementById('formNuevoManeo').submit();
-        }
-    }
-
-    function mostrarSelectorVariantes(variantes) {
-        variantSelect.innerHTML = '<option value="">— Selecciona una subcategoría —</option>';
-        variantes.forEach(v => {
-            const stockLabel = v.stock > 0 ? `(Stock: ${v.stock})` : '(Sin stock)';
-            variantSelect.innerHTML += `<option value="${v.id}" data-stock="${v.stock}">${v.nombre} ${stockLabel}</option>`;
-        });
-        variantCol.style.display = 'block';
-        variantHidden.value = '';
-        variantStockInfo.textContent = '';
-    }
-
-    function ocultarVariantes() {
-        variantCol.style.display = 'none';
-        variantSelect.innerHTML = '<option value="">— Producto general —</option>';
-        variantHidden.value = '';
-        variantStockInfo.textContent = '';
-    }
-
-    function onVariantChange() {
-        const selectedOption = variantSelect.options[variantSelect.selectedIndex];
-        variantHidden.value = variantSelect.value;
-        
-        if (variantSelect.value && selectedOption.dataset.stock) {
-            variantStockInfo.innerHTML = `<i class="fa-solid fa-cubes text-primary me-1"></i> Stock disponible: <strong>${selectedOption.dataset.stock}</strong> uds`;
-        } else {
+            variantContainer.style.display = 'none';
+            variantSelect.innerHTML = '<option value="">— Producto general —</option>';
             variantStockInfo.textContent = '';
         }
     }
+
+    function setupRow(row) {
+        const skuInput = row.querySelector('.sku-input');
+        const valorInput = row.querySelector('.valor-input');
+        const variantContainer = row.querySelector('.variant-container');
+        const variantSelect = row.querySelector('.variant-select');
+        const variantStockInfo = row.querySelector('.variant-stock-info');
+        const delBtn = row.querySelector('.btn-del-row');
+
+        let debounceTimer = null;
+
+        // Búsqueda de variantes al escribir o cambiar SKU
+        skuInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const sku = skuInput.value.trim();
+                if (sku.length > 0) {
+                    buscarVariantesFila(sku, variantContainer, variantSelect, variantStockInfo);
+                } else {
+                    variantContainer.style.display = 'none';
+                    variantSelect.innerHTML = '<option value="">— Producto general —</option>';
+                    variantStockInfo.textContent = '';
+                }
+            }, 350);
+        });
+
+        skuInput.addEventListener('change', function() {
+            const sku = skuInput.value.trim();
+            if (sku.length > 0) {
+                buscarVariantesFila(sku, variantContainer, variantSelect, variantStockInfo);
+            }
+        });
+
+        // Soporte de lector de código de barras (Enter en SKU)
+        skuInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const sku = skuInput.value.trim();
+                if (sku.length > 0) {
+                    buscarVariantesFila(sku, variantContainer, variantSelect, variantStockInfo);
+                }
+                // Mover el foco a la siguiente fila o agregar una si es la última
+                const allRows = Array.from(filasContainer.querySelectorAll('.fila-maneo'));
+                const currentIndex = allRows.indexOf(row);
+                if (currentIndex < allRows.length - 1) {
+                    allRows[currentIndex + 1].querySelector('.sku-input').focus();
+                } else {
+                    crearNuevaFila();
+                    const updatedRows = filasContainer.querySelectorAll('.fila-maneo');
+                    updatedRows[updatedRows.length - 1].querySelector('.sku-input').focus();
+                }
+            }
+        });
+
+        // Actualización de preview de valor en pesos
+        valorInput.addEventListener('input', function() {
+            updateValorPreview(valorInput);
+        });
+        valorInput.addEventListener('change', function() {
+            updateValorPreview(valorInput);
+        });
+
+        // Cambio en selector de subcategoría
+        variantSelect.addEventListener('change', function() {
+            const selectedOption = variantSelect.options[variantSelect.selectedIndex];
+            if (variantSelect.value && selectedOption.dataset.stock) {
+                variantStockInfo.innerHTML = `<i class="fa-solid fa-cubes text-primary me-1"></i> Stock: <strong>${selectedOption.dataset.stock}</strong> uds`;
+            } else {
+                variantStockInfo.textContent = '';
+            }
+        });
+
+        // Botón eliminar fila
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                const totalRows = filasContainer.querySelectorAll('.fila-maneo').length;
+                if (totalRows > 3) {
+                    row.remove();
+                    updateDeleteButtons();
+                }
+            });
+        }
+    }
+
+    function crearNuevaFila() {
+        const row = document.createElement('div');
+        row.className = 'row g-2 align-items-start mb-2 fila-maneo';
+        row.innerHTML = `
+            <div class="col-2">
+                <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+            </div>
+            <div class="col-3">
+                <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 15">
+                <div class="valor-preview-badge mt-1 ps-1"></div>
+            </div>
+            <div class="col-7">
+                <div class="d-flex align-items-center gap-1">
+                    <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                    <button type="button" class="btn-del-row" title="Eliminar fila" tabindex="-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="variant-container mt-1" style="display: none;">
+                    <select name="variant_id[]" class="form-select form-select-sm bg-light border-0 variant-select">
+                        <option value="">— Producto general —</option>
+                    </select>
+                    <small class="text-muted variant-stock-info"></small>
+                </div>
+            </div>
+        `;
+        filasContainer.appendChild(row);
+        setupRow(row);
+        updateDeleteButtons();
+        return row;
+    }
+
+    // Inicializar filas existentes
+    document.querySelectorAll('.fila-maneo').forEach(row => {
+        setupRow(row);
+    });
+    updateDeleteButtons();
+
+    // Evento botón (+) para agregar más filas
+    btnAgregarFila.addEventListener('click', function() {
+        const newRow = crearNuevaFila();
+        newRow.querySelector('.sku-input').focus();
+    });
+
+    // Validación antes de enviar el formulario
+    formNuevoManeo.addEventListener('submit', function(e) {
+        const rows = filasContainer.querySelectorAll('.fila-maneo');
+        let productosValidos = 0;
+
+        rows.forEach(row => {
+            const skuVal = row.querySelector('.sku-input').value.trim();
+            const cantInput = row.querySelector('.cantidad-input');
+            if (skuVal.length > 0) {
+                productosValidos++;
+                // Si especificó SKU pero dejó cantidad vacía, asignar 1 por defecto
+                if (!cantInput.value || parseInt(cantInput.value) <= 0) {
+                    cantInput.value = '1';
+                }
+            }
+        });
+
+        if (productosValidos === 0) {
+            e.preventDefault();
+            alert('Por favor, ingresa al menos un producto a prestar en las filas.');
+            const firstSku = filasContainer.querySelector('.sku-input');
+            if (firstSku) firstSku.focus();
+        }
+    });
 </script>
 {% endblock %}
