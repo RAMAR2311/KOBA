@@ -218,7 +218,8 @@ class Maneo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=True)
-    local_vecino = db.Column(db.String(150), nullable=False)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True) # Enlace al módulo de Clientes / Locales
+    local_vecino = db.Column(db.String(150), nullable=False) # Nombre para histórico o compatibilidad
     cantidad = db.Column(db.Integer, nullable=False)
     valor_fijo = db.Column(db.Numeric(10, 2), nullable=True) # Valor fijo asignado manualmente
     estado = db.Column(db.String(50), nullable=False, default='PENDIENTE') # PENDIENTE, FACTURADO, DEVUELTO
@@ -227,9 +228,28 @@ class Maneo(db.Model):
 
     producto = db.relationship('Product', backref='maneos', lazy=True)
     variante = db.relationship('ProductVariant', backref='maneos_rel', lazy=True)
+    cliente = db.relationship('Cliente', backref='maneos', lazy=True)
 
     def __init__(self, **kwargs):
         super(Maneo, self).__init__(**kwargs)
+
+    @property
+    def nombre_cliente_o_local(self):
+        if self.cliente:
+            return self.cliente.nombre_o_razon_social
+        return self.local_vecino or "Sin especificar"
+
+    @property
+    def valor_unitario_calculado(self):
+        if self.valor_fijo is not None:
+            return float(self.valor_fijo)
+        if self.variante and self.variante.precio_sugerido:
+            return float(self.variante.precio_sugerido)
+        return float(self.producto.precio_sugerido or 0)
+
+    @property
+    def subtotal_calculado(self):
+        return self.cantidad * self.valor_unitario_calculado
 
 class Expense(db.Model):
     __tablename__ = 'expenses'
@@ -253,10 +273,13 @@ class Cliente(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nombre_o_razon_social = db.Column(db.String(150), nullable=False)
-    documento_o_nit = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    telefono = db.Column(db.String(50), nullable=False)
+    documento_o_nit = db.Column(db.String(50), unique=True, nullable=True, index=True)
+    telefono = db.Column(db.String(50), nullable=True)
+    contacto_persona = db.Column(db.String(100), nullable=True) # Nombre de la persona encargada
+    local_numero = db.Column(db.String(50), nullable=True) # Número o identificación del local
     email = db.Column(db.String(120), nullable=True)
     direccion = db.Column(db.String(255), nullable=True)
+    notas = db.Column(db.Text, nullable=True)
     creado_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # ID del vendedor/admin que lo creó
     fecha_registro = db.Column(db.DateTime, default=obtener_hora_bogota)
 
@@ -265,6 +288,30 @@ class Cliente(db.Model):
 
     def __init__(self, **kwargs):
         super(Cliente, self).__init__(**kwargs)
+
+    @property
+    def maneos_activos(self):
+        return [m for m in self.maneos if m.estado == 'PENDIENTE']
+
+    @property
+    def saldo_maneos_pendiente(self):
+        return sum(m.subtotal_calculado for m in self.maneos if m.estado == 'PENDIENTE')
+
+    @property
+    def unidades_maneos_pendientes(self):
+        return sum(m.cantidad for m in self.maneos if m.estado == 'PENDIENTE')
+
+    @property
+    def total_historico_prestado(self):
+        return sum(m.subtotal_calculado for m in self.maneos)
+
+    @property
+    def total_historico_cobrado(self):
+        return sum(m.subtotal_calculado for m in self.maneos if m.estado == 'FACTURADO')
+
+    @property
+    def total_historico_devuelto(self):
+        return sum(m.subtotal_calculado for m in self.maneos if m.estado == 'DEVUELTO')
 
     @property
     def total_contado(self):
@@ -276,17 +323,15 @@ class Cliente(db.Model):
 
     @property
     def total_abonado(self):
-        # Solo sumamos abonos que NO son de facturas de contado (los de contado ya se reflejan en total_contado)
         return sum(a.monto for a in self.abonos if not (a.factura and a.factura.modalidad == 'contado'))
 
     @property
     def deuda_total(self):
-        # La deuda es el total de crédito menos lo abonado a crédito o a cuenta global
         return self.total_credito - self.total_abonado
 
     @property
     def estado_global(self):
-        return "Con Deuda" if self.deuda_total > 0 else "Al Día"
+        return "Con Deuda" if (self.deuda_total > 0 or self.saldo_maneos_pendiente > 0) else "Al Día"
 
 class FacturaBodega(db.Model):
     __tablename__ = 'facturas_bodega'

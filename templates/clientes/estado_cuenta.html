@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Cabecera del Cliente / Estado de Cuenta -->
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h2 class="fw-bold text-brand-black m-0">{{ cliente.nombre_o_razon_social }}</h2>
+            {% if cliente.local_numero %}
+                <span class="badge bg-light text-dark border px-3 py-1 fs-6"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ cliente.local_numero }}</span>
+            {% endif %}
+            {% if saldo_pendiente > 0 %}
+                <span class="badge bg-danger rounded-pill px-3 py-1 fs-6"><i class="fa-solid fa-triangle-exclamation me-1"></i>Deuda Activa</span>
+            {% else %}
+                <span class="badge bg-success rounded-pill px-3 py-1 fs-6"><i class="fa-solid fa-circle-check me-1"></i>Cuenta al Día</span>
+            {% endif %}
+        </div>
+        <p class="text-muted small m-0 mt-1">
+            {% if cliente.contacto_persona %}<span class="me-2"><i class="fa-solid fa-user text-muted me-1"></i>Contacto: <strong>{{ cliente.contacto_persona }}</strong></span>{% endif %}
+            {% if cliente.telefono %}
+                <span class="me-2"><i class="fa-solid fa-phone text-muted me-1"></i>Tel: <strong>{{ cliente.telefono }}</strong></span>
+            {% endif %}
+            <span class="text-muted">· Registrado el {{ cliente.fecha_registro.strftime('%d/%m/%Y') }}</span>
+        </p>
+    </div>
+
+    <!-- Botones de Acción Superior -->
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="fa-solid fa-arrow-left me-1"></i> Directorio
+        </a>
+        <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold" id="btnCompartirWhatsApp">
+            <i class="fa-brands fa-whatsapp me-1 fs-5 align-middle"></i> Enviar Estado
+        </button>
+        <button type="button" class="btn btn-outline-dark rounded-pill px-3 fw-bold" onclick="window.print()">
+            <i class="fa-solid fa-print me-1"></i> Imprimir
+        </button>
+        <a href="{{ url_for('admin_bp.maneos', cliente_id=cliente.id) }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
+            <i class="fa-solid fa-handshake me-1"></i> Prestar Maneo
+        </a>
+    </div>
+</div>
+
+{% if cliente.notas %}
+<div class="alert alert-light border shadow-sm mb-4 rounded-3 d-flex align-items-center">
+    <i class="fa-solid fa-clipboard-check fs-4 text-brand-blue me-3"></i>
+    <div>
+        <strong class="d-block text-brand-black">Notas / Acuerdos Comerciales:</strong>
+        <span class="text-muted small">{{ cliente.notas }}</span>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tarjetas Resumen Financiero del Cliente -->
+<div class="row g-3 mb-4">
+    <!-- Saldo Pendiente Actual -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-custom p-3 border-0 shadow-sm {% if saldo_pendiente > 0 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-white{% endif %} h-100">
+            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Saldo Pendiente por Cobrar</span>
+            <h3 class="fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %} my-1">
+                ${{ '{:,.0f}'.format(saldo_pendiente) }}
+            </h3>
+            <small class="text-muted">
+                {% if saldo_pendiente > 0 %}
+                    <i class="fa-solid fa-clock me-1 text-danger"></i>Cobro pendiente
+                {% else %}
+                    <i class="fa-solid fa-check me-1 text-success"></i>Sin dinero adeudado
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+    <!-- Unidades Físicas en su Poder -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Mercancía en su Poder</span>
+            <h3 class="fw-bold text-brand-black my-1">
+                {{ unidades_pendientes }} <span class="fs-6 text-muted fw-normal">unidades</span>
+            </h3>
+            <small class="text-muted">{{ maneos_activos|length }} registros activos de maneo</small>
+        </div>
+    </div>
+
+    <!-- Total Cobrado / Facturado -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Total Cobrado (Histórico)</span>
+            <h3 class="fw-bold text-success my-1">
+                ${{ '{:,.0f}'.format(total_cobrado) }}
+            </h3>
+            <small class="text-muted">Liquidado a través de caja</small>
+        </div>
+    </div>
+
+    <!-- Total Devuelto -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Total Devuelto en Producto</span>
+            <h3 class="fw-bold text-secondary my-1">
+                ${{ '{:,.0f}'.format(total_devuelto) }}
+            </h3>
+            <small class="text-muted">Reingresado a inventario físico</small>
+        </div>
+    </div>
+</div>
+
+<!-- Pestañas de Maneos -->
+<div class="card card-custom p-0 border-0 shadow-sm bg-white overflow-hidden">
+    <div class="card-header bg-light border-0 p-3">
+        <ul class="nav nav-pills gap-2" id="estadoCuentaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-pill px-4 fw-bold" id="activos-tab" data-bs-toggle="tab" data-bs-target="#tab-activos" type="button" role="tab">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Maneos Activos Pendientes 
+                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ maneos_activos|length }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-4 fw-bold" id="historial-tab" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button" role="tab">
+                    <i class="fa-solid fa-list-check me-1"></i> Historial Resuelto (Cobros y Devoluciones)
+                    <span class="badge bg-light text-dark border rounded-pill ms-1">{{ maneos_historial|length }}</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content" id="estadoCuentaTabsContent">
+        <!-- PESTAÑA 1: MANEOS ACTIVOS (PENDIENTES) -->
+        <div class="tab-pane fade show active p-0" id="tab-activos" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover table-custom mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4" width="140">FECHA</th>
+                            <th>PRODUCTO PRESTADO</th>
+                            <th class="text-center" width="100">CANTIDAD</th>
+                            <th class="text-end" width="140">VALOR UND</th>
+                            <th class="text-end" width="150">SUBTOTAL</th>
+                            <th class="text-center pe-4" width="220">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in maneos_activos %}
+                        <tr>
+                            <td class="ps-4 small text-muted">
+                                <div><strong>{{ m.fecha_prestamo.strftime('%d/%m/%Y') }}</strong></div>
+                                <div style="font-size:0.75rem;">{{ m.fecha_prestamo.strftime('%H:%M') }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
+                                {% if m.variante %}
+                                    <span class="badge bg-light text-dark border"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</span>
+                                {% endif %}
+                                <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">{{ m.cantidad }}</span>
+                            </td>
+                            <td class="text-end fw-semibold text-muted">
+                                ${{ '{:,.0f}'.format(m.valor_unitario_calculado) }}
+                            </td>
+                            <td class="text-end fw-bold text-danger fs-6">
+                                ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <!-- Botón Facturar / Cobrar -->
+                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFacturar{{ m.id }}" title="Cobrar / Facturar este producto">
+                                        <i class="fa-solid fa-cash-register me-1"></i> Cobrar
+                                    </button>
+                                    <!-- Botón Devolver -->
+                                    <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}" onsubmit="return confirm('¿Confirmas que recibiste devuelto el producto intacto? Esto lo devolverá al stock físico de KOBA.');" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="origen" value="estado_cuenta">
+                                        <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Devolver producto intacto">
+                                            <i class="fa-solid fa-rotate-left"></i> Devolver
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Modal Facturar Específico -->
+                                <div class="modal fade text-start" id="modalFacturar{{ m.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow">
+                                            <div class="modal-header border-0 bg-light">
+                                                <h5 class="modal-title fw-bold text-brand-black">
+                                                    <i class="fa-solid fa-cash-register text-success me-2"></i>Cobrar / Facturar Maneo
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="origen" value="estado_cuenta">
+                                                <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+
+                                                <div class="modal-body p-4">
+                                                    <div class="bg-light p-3 rounded-3 mb-3">
+                                                        <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
+                                                        {% if m.variante %}
+                                                            <small class="text-muted d-block">Subcategoría: {{ m.variante.nombre_variante }}</small>
+                                                        {% endif %}
+                                                        <div class="small text-muted mt-1">Cantidad a facturar: <strong>{{ m.cantidad }} unidades</strong></div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Precio de Venta Unitario ($)</label>
+                                                        <input type="number" step="any" name="precio_venta" class="form-control" value="{{ '%.0f'|format(m.valor_unitario_calculado) }}" required>
+                                                        <small class="text-muted">Valor sugerido / acordado en el maneo.</small>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Método de Pago Recibido</label>
+                                                        <select name="metodo_pago" class="form-select">
+                                                            <option value="efectivo">Efectivo</option>
+                                                            <option value="nequi">Nequi</option>
+                                                            <option value="daviplata">Daviplata</option>
+                                                            <option value="tarjeta">Tarjeta / Datafono</option>
+                                                            <option value="transferencia">Transferencia Bancaria</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-0 bg-light">
+                                                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                                                        <i class="fa-solid fa-check me-1"></i> Confirmar Cobro
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-circle-check fs-1 text-success mb-2 opacity-50"></i>
+                                <p class="mb-0 fw-semibold text-brand-black">Este local no tiene maneos pendientes por resolver.</p>
+                                <small class="text-muted">Todo lo entregado ha sido liquidado o devuelto.</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 2: HISTORIAL COMPLETO -->
+        <div class="tab-pane fade p-0" id="tab-historial" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover table-custom mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">FECHA ENTREGA</th>
+                            <th>FECHA RESOLUCIÓN</th>
+                            <th>PRODUCTO</th>
+                            <th class="text-center">CANT</th>
+                            <th class="text-end">SUBTOTAL</th>
+                            <th class="text-center pe-4">ESTADO FINAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in maneos_historial %}
+                        <tr>
+                            <td class="ps-4 small text-muted">
+                                {{ m.fecha_prestamo.strftime('%d/%m/%Y %H:%M') if m.fecha_prestamo else '—' }}
+                            </td>
+                            <td class="small text-muted">
+                                {{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if m.fecha_resolucion else '—' }}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
+                                {% if m.variante %}
+                                    <small class="text-muted">Subcat: {{ m.variante.nombre_variante }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                            <td class="text-end fw-bold text-brand-black">
+                                ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
+                            </td>
+                            <td class="text-center pe-4">
+                                {% if m.estado == 'FACTURADO' %}
+                                    <span class="badge bg-success rounded-pill px-3 py-1 fw-bold">
+                                        <i class="fa-solid fa-cash-register me-1"></i>COBRADO
+                                    </span>
+                                {% elif m.estado == 'DEVUELTO' %}
+                                    <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold text-white">
+                                        <i class="fa-solid fa-rotate-left me-1"></i>DEVUELTO
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border">{{ m.estado }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                No hay movimientos resueltos registrados para este cliente.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para armar y enviar mensaje limpio por WhatsApp -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnWhatsApp = document.getElementById('btnCompartirWhatsApp');
+    if (btnWhatsApp) {
+        btnWhatsApp.addEventListener('click', function() {
+            const nombre = {{ cliente.nombre_o_razon_social|tojson }};
+            const saldo = {{ saldo_pendiente }};
+            const unidades = {{ unidades_pendientes }};
+            const tel = {{ (cliente.telefono or '')|tojson }};
+
+            let texto = `*ESTADO DE CUENTA - KOBA*\n`;
+            texto += `Cliente / Local: *${nombre}*\n`;
+            texto += `Fecha: ${new Date().toLocaleDateString('es-CO')}\n`;
+            texto += `--------------------------------\n`;
+
+            {% if maneos_activos %}
+                texto += `*PRODUCTOS PENDIENTES EN MANEO:*\n`;
+                {% for m in maneos_activos %}
+                    texto += `• {{ m.cantidad }}x {{ m.producto.nombre }}{% if m.variante %} ({{ m.variante.nombre_variante }}){% endif %} - ${{ '{:,.0f}'.format(m.subtotal_calculado) }}\n`;
+                {% endfor %}
+                texto += `--------------------------------\n`;
+                texto += `*TOTAL PENDIENTE POR PAGAR:* $${Number(saldo).toLocaleString('es-CO')}\n`;
+                texto += `Total Unidades: ${unidades}\n`;
+            {% else %}
+                texto += `Actualmente estás *AL DÍA* sin productos ni dinero pendiente.\n`;
+            {% endif %}
+
+            texto += `\n¡Gracias por tu colaboración comercial!`;
+
+            const encoded = encodeURIComponent(texto);
+            let url = '';
+            if (tel && tel.trim().length >= 7) {
+                const cleanPhone = tel.replace(/[^0-9]/g, '');
+                url = `https://wa.me/57${cleanPhone}?text=${encoded}`;
+            } else {
+                url = `https://api.whatsapp.com/send?text=${encoded}`;
+            }
+            window.open(url, '_blank');
+        });
+    }
+});
+</script>
+
+<style>
+@media print {
+    .btn, nav, .card-header, #estadoCuentaTabs {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold text-brand-black m-0">
+            <i class="fa-solid fa-users-line text-brand-blue me-2"></i>Directorio de Clientes y Locales
+        </h2>
+        <p class="text-muted small m-0 mt-1">Cuentas corrientes, consignaciones y control de maneos de mercancía.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('admin_bp.maneos') }}" class="btn btn-outline-secondary rounded-pill px-3 fw-semibold">
+            <i class="fa-solid fa-handshake me-1 text-brand-blue"></i> Módulo Maneos
+        </a>
+        <a href="{{ url_for('clientes_bp.nuevo') }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
+            <i class="fa-solid fa-plus me-1"></i> Nuevo Local / Cliente
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas KPI Resumen -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary me-3" style="width: 48px; height: 48px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-store fs-5"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.72rem;">Locales Registrados</span>
+                    <h4 class="fw-bold text-brand-black m-0">{{ total_clientes }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-danger bg-opacity-10 text-danger me-3" style="width: 48px; height: 48px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-hand-holding-dollar fs-5"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.72rem;">Saldo en la Calle</span>
+                    <h4 class="fw-bold text-danger m-0">${{ '{:,.0f}'.format(total_saldo_calle) }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning me-3" style="width: 48px; height: 48px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-boxes-stacked fs-5"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.72rem;">Unidades Prestadas</span>
+                    <h4 class="fw-bold text-brand-black m-0">{{ total_unidades_calle }} <small class="text-muted fw-normal fs-6">uds</small></h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-info bg-opacity-10 text-info me-3" style="width: 48px; height: 48px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.72rem;">Con Deuda Activa</span>
+                    <h4 class="fw-bold text-brand-black m-0">{{ clientes_con_deuda_count }} <small class="text-muted fw-normal fs-6">locales</small></h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y Buscador -->
+<div class="card card-custom p-3 mb-4 border-0 shadow-sm bg-white">
+    <div class="row align-items-center g-3">
+        <div class="col-md-6 col-lg-7">
+            <form method="GET" action="{{ url_for('clientes_bp.index') }}" class="m-0">
+                <div class="input-group rounded-pill border bg-white overflow-hidden shadow-sm">
+                    <span class="input-group-text bg-white border-0 ps-3 text-muted">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" 
+                           name="q" 
+                           class="form-control border-0 bg-white shadow-none ps-2" 
+                           placeholder="Buscar por Nombre, Local, Contacto o Teléfono..." 
+                           value="{{ q or '' }}">
+                    {% if q %}
+                    <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-light border-0 px-3 text-muted" title="Limpiar búsqueda">
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                    {% endif %}
+                    <input type="hidden" name="filtro" value="{{ filtro }}">
+                    <button type="submit" class="btn btn-blue px-4 fw-bold">Buscar</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6 col-lg-5 text-md-end">
+            <div class="btn-group btn-group-sm rounded-pill p-1 bg-light border shadow-sm" role="group">
+                <a href="{{ url_for('clientes_bp.index', q=q, filtro='todos') }}" class="btn rounded-pill px-3 fw-bold {% if filtro == 'todos' %}btn-blue text-white{% else %}text-muted{% endif %}">
+                    Todos ({{ total_clientes }})
+                </a>
+                <a href="{{ url_for('clientes_bp.index', q=q, filtro='con_deuda') }}" class="btn rounded-pill px-3 fw-bold {% if filtro == 'con_deuda' %}btn-danger text-white{% else %}text-muted{% endif %}">
+                    Con Deuda ({{ clientes_con_deuda_count }})
+                </a>
+                <a href="{{ url_for('clientes_bp.index', q=q, filtro='al_dia') }}" class="btn rounded-pill px-3 fw-bold {% if filtro == 'al_dia' %}btn-success text-white{% else %}text-muted{% endif %}">
+                    Al Día
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Clientes -->
+<div class="card card-custom p-0 overflow-hidden border-0 shadow-sm bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover table-custom mb-0 align-middle">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">LOCAL / PERSONA</th>
+                    <th>CONTACTO & TELÉFONO</th>
+                    <th class="text-center">MANEOS ACTIVOS</th>
+                    <th class="text-end">SALDO PENDIENTE</th>
+                    <th class="text-center pe-4" width="260">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clientes %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-light border me-3 d-flex align-items-center justify-content-center text-brand-blue fw-bold" style="width: 40px; height: 40px;">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('clientes_bp.estado_cuenta', id=c.id) }}" class="fw-bold text-brand-black text-decoration-none hover-primary" style="font-size: 1rem;">
+                                    {{ c.nombre_o_razon_social }}
+                                </a>
+                                <div class="small text-muted">
+                                    {% if c.local_numero %}
+                                        <span class="badge bg-light text-dark border me-1"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ c.local_numero }}</span>
+                                    {% endif %}
+                                    {% if c.documento_o_nit %}
+                                        <span class="text-muted">NIT/CC: {{ c.documento_o_nit }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if c.contacto_persona %}
+                            <div class="fw-semibold text-brand-black small"><i class="fa-solid fa-user me-1 text-muted"></i>{{ c.contacto_persona }}</div>
+                        {% endif %}
+                        {% if c.telefono %}
+                            <div class="small mt-1">
+                                <a href="https://wa.me/{{ c.telefono|replace(' ', '')|replace('-', '')|replace('+', '') }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.78rem;" title="Chatear por WhatsApp">
+                                    <i class="fa-brands fa-whatsapp me-1"></i>{{ c.telefono }}
+                                </a>
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">Sin teléfono</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if c.unidades_maneos_pendientes > 0 %}
+                            <span class="badge bg-warning text-dark border border-warning rounded-pill px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-handshake me-1"></i>{{ c.maneos_activos|length }} registros ({{ c.unidades_maneos_pendientes }} uds)
+                            </span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border rounded-pill px-3 py-1">
+                                Sin pendientes
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if c.saldo_maneos_pendiente > 0 %}
+                            <div class="fw-bolder text-danger fs-6">${{ '{:,.0f}'.format(c.saldo_maneos_pendiente) }}</div>
+                            <small class="text-danger opacity-75" style="font-size: 0.72rem;">Por cobrar</small>
+                        {% else %}
+                            <div class="fw-bold text-success"><i class="fa-solid fa-circle-check me-1"></i>$0</div>
+                            <small class="text-muted" style="font-size: 0.72rem;">Al día</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="d-flex justify-content-center gap-1">
+                            <a href="{{ url_for('clientes_bp.estado_cuenta', id=c.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm" title="Ver Estado de Cuenta Completo">
+                                <i class="fa-solid fa-file-invoice-dollar me-1"></i> Estado Cuenta
+                            </a>
+                            <a href="{{ url_for('clientes_bp.editar', id=c.id) }}" class="btn btn-sm btn-light border text-secondary rounded-pill px-2" title="Editar Local">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            {% if c.saldo_maneos_pendiente == 0 and c.maneos_activos|length == 0 %}
+                            <form method="POST" action="{{ url_for('clientes_bp.eliminar', id=c.id) }}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este cliente/local?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-light border text-danger rounded-pill px-2" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-users-slash fs-1 mb-3 text-muted opacity-50"></i>
+                        <p class="mb-2 fw-semibold">No se encontraron clientes o locales registrados.</p>
+                        <a href="{{ url_for('clientes_bp.nuevo') }}" class="btn btn-sm btn-blue rounded-pill px-3">
+                            <i class="fa-solid fa-plus me-1"></i> Registrar Primer Local
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

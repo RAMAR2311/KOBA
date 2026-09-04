@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, abort, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariant, Sale, User, Maneo, SaleDetail, SalePayment, StockAdjustment, Expense, ArqueoCaja, obtener_hora_bogota
+from models import db, Product, ProductVariant, Sale, User, Maneo, Cliente, SaleDetail, SalePayment, StockAdjustment, Expense, ArqueoCaja, obtener_hora_bogota
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash
 from decorators import admin_required
@@ -124,14 +124,40 @@ def maneos():
     lista_maneos.sort(key=lambda m: 0 if m.estado == 'PENDIENTE' else 1)
     
     productos = Product.query.order_by(Product.nombre).all()
-    return render_template('admin/maneos.html', maneos=lista_maneos, productos=productos)
+    clientes = Cliente.query.order_by(Cliente.nombre_o_razon_social.asc()).all()
+    selected_cliente_id = request.args.get('cliente_id', type=int)
+    return render_template(
+        'admin/maneos.html', 
+        maneos=lista_maneos, 
+        productos=productos, 
+        clientes=clientes, 
+        selected_cliente_id=selected_cliente_id
+    )
 
 @admin_bp.route('/maneos/prestar', methods=['POST'])
 @login_required
 def maneos_prestar():
+    cliente_id_raw = request.form.get('cliente_id', '').strip()
     local_vecino = request.form.get('local_vecino', '').strip()
-    if not local_vecino:
-        flash('Debes indicar el Local Vecino o Persona a quien se le presta.', 'danger')
+
+    cliente = None
+    if cliente_id_raw:
+        try:
+            cliente = Cliente.query.get(int(cliente_id_raw))
+        except (ValueError, TypeError):
+            cliente = None
+
+    if cliente:
+        local_vecino = cliente.nombre_o_razon_social
+    elif local_vecino:
+        # Si se escribió manualmente, sincronizar con el directorio de Clientes
+        cliente = Cliente.query.filter(Cliente.nombre_o_razon_social.ilike(local_vecino)).first()
+        if not cliente:
+            cliente = Cliente(nombre_o_razon_social=local_vecino, creado_por_id=current_user.id)
+            db.session.add(cliente)
+            db.session.flush()
+    else:
+        flash('Debes seleccionar o indicar el Local Vecino o Persona a quien se le presta.', 'danger')
         return redirect(url_for('admin_bp.maneos'))
 
     # Obtener listas de campos del formulario
@@ -236,6 +262,7 @@ def maneos_prestar():
             nuevo_maneo = Maneo(
                 product_id=producto.id,
                 variant_id=variante.id if variante else None,
+                cliente_id=cliente.id if cliente else None,
                 local_vecino=local_vecino,
                 cantidad=cantidad,
                 valor_fijo=valor_fijo,
@@ -363,9 +390,11 @@ def maneos_facturar(id):
             flash(f'Maneo facturado totalmente. Se registró la venta de ${precio_venta * cantidad_vendida} en la caja.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Error al facturar el maneo.', 'danger')
-
-    return redirect(url_for('admin_bp.maneos'))
+        origen = request.form.get('origen', '')
+        cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
+        if origen == 'estado_cuenta' and cliente_redirect_id:
+            return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
+        return redirect(url_for('admin_bp.maneos'))
 
 @admin_bp.route('/maneos/devolver/<int:id>', methods=['POST'])
 @login_required
@@ -426,6 +455,10 @@ def maneos_devolver(id):
         db.session.rollback()
         flash('Error al procesar la devolución.', 'danger')
 
+    origen = request.form.get('origen', '')
+    cliente_redirect_id = request.form.get('cliente_id') or (maneo.cliente_id if maneo.cliente_id else None)
+    if origen == 'estado_cuenta' and cliente_redirect_id:
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_redirect_id))
     return redirect(url_for('admin_bp.maneos'))
 
 @admin_bp.route('/balance-financiero', methods=['GET', 'POST'])

@@ -191,11 +191,28 @@
             <!-- Bloque Derecho: Local Vecino / Persona y Botón Registrar Maneo -->
             <div class="col-lg-3 col-md-4 d-flex flex-column justify-content-between">
                 <div>
-                    <label class="form-label fw-bold text-brand-black mb-2">Local Vecino / Persona</label>
-                    <input type="text" name="local_vecino" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex" required>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-brand-black mb-0">Local Vecino / Cliente</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 fw-bold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#modalCrearClienteRapido">
+                            <i class="fa-solid fa-plus me-1"></i> Nuevo Local
+                        </button>
+                    </div>
+                    <select name="cliente_id" id="clienteSelectManeo" class="form-select bg-light border-0 shadow-sm" required>
+                        <option value="">— Seleccionar Local o Persona —</option>
+                        {% for c in clientes %}
+                            <option value="{{ c.id }}" {% if selected_cliente_id == c.id %}selected{% endif %}>
+                                {{ c.nombre_o_razon_social }}{% if c.local_numero %} ({{ c.local_numero }}){% endif %}{% if c.saldo_maneos_pendiente > 0 %} · [Debe ${{ '{:,.0f}'.format(c.saldo_maneos_pendiente) }}]{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('clientes_bp.index') }}" class="small text-brand-blue text-decoration-none fw-semibold">
+                            <i class="fa-solid fa-users-line me-1"></i> Ver Directorio
+                        </a>
+                    </div>
                 </div>
                 <div class="text-end mt-4 mt-md-auto pt-3">
-                    <button type="submit" class="btn btn-registrar-maneo shadow-sm">
+                    <button type="submit" class="btn btn-registrar-maneo shadow-sm w-100 justify-content-center">
                         <i class="fa-solid fa-paper-plane me-1"></i> Registrar Maneo
                     </button>
                 </div>
@@ -229,7 +246,16 @@
                             <br><small class="text-muted fw-normal" style="font-size: 0.75rem;">(${{ '{:,.0f}'.format(precio_unit) }} c/u)</small>
                         {% endif %}
                     </td>
-                    <td class="fw-bold text-brand-black"><i class="fa-solid fa-store text-muted me-2"></i>{{ m.local_vecino }}</td>
+                    <td class="fw-bold text-brand-black">
+                        <i class="fa-solid fa-store text-muted me-2"></i>
+                        {% if m.cliente %}
+                            <a href="{{ url_for('clientes_bp.estado_cuenta', id=m.cliente.id) }}" class="text-brand-black text-decoration-none hover-primary" title="Ver Estado de Cuenta de este local">
+                                {{ m.cliente.nombre_o_razon_social }} <i class="fa-solid fa-file-invoice-dollar text-primary small ms-1"></i>
+                            </a>
+                        {% else %}
+                            {{ m.local_vecino }}
+                        {% endif %}
+                    </td>
                     <td>
                         <span class="text-brand-black fw-semibold">{{ m.producto.nombre }}</span> <small class="text-muted">({{ m.producto.sku }})</small>
                         {% if m.variante %}
@@ -601,5 +627,109 @@
             if (firstSku) firstSku.focus();
         }
     });
+
+    // AJAX para crear cliente rápido desde el modal
+    const formRapido = document.getElementById('formCrearClienteRapido');
+    if (formRapido) {
+        formRapido.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nombre = document.getElementById('rapidoNombre').value.trim();
+            const local = document.getElementById('rapidoLocal').value.trim();
+            const telefono = document.getElementById('rapidoTelefono').value.trim();
+            const contacto = document.getElementById('rapidoContacto').value.trim();
+
+            if (!nombre) return;
+
+            const btnSubmit = document.getElementById('btnGuardarClienteRapido');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+
+            fetch("{{ url_for('clientes_bp.api_crear_rapido') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    nombre: nombre,
+                    local_numero: local,
+                    telefono: telefono,
+                    contacto_persona: contacto
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar';
+
+                if (data.success) {
+                    const select = document.getElementById('clienteSelectManeo');
+                    let opt = select.querySelector(`option[value="${data.cliente.id}"]`);
+                    if (!opt) {
+                        opt = document.createElement('option');
+                        opt.value = data.cliente.id;
+                        opt.textContent = data.cliente.nombre + (data.cliente.local ? ` (${data.cliente.local})` : '');
+                        select.appendChild(opt);
+                    }
+                    select.value = data.cliente.id;
+
+                    const modalEl = document.getElementById('modalCrearClienteRapido');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInst.hide();
+                    formRapido.reset();
+                } else {
+                    alert(data.message || 'Error al registrar el cliente');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar';
+                alert('Ocurrió un problema de comunicación al guardar.');
+            });
+        });
+    }
 </script>
+
+<!-- Modal Rápido para Crear Cliente / Local -->
+<div class="modal fade" id="modalCrearClienteRapido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold text-brand-black">
+                    <i class="fa-solid fa-store text-brand-blue me-2"></i>Registrar Nuevo Local / Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formCrearClienteRapido">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre del Local o Persona <span class="text-danger">*</span></label>
+                        <input type="text" id="rapidoNombre" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex, Don Carlos" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Local / Puesto</label>
+                            <input type="text" id="rapidoLocal" class="form-control bg-light border-0" placeholder="Ej: Local 102">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">WhatsApp / Teléfono</label>
+                            <input type="text" id="rapidoTelefono" class="form-control bg-light border-0" placeholder="Ej: 3123456789">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Persona Encargada</label>
+                        <input type="text" id="rapidoContacto" class="form-control bg-light border-0" placeholder="Ej: Alexander Gómez">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm" id="btnGuardarClienteRapido">
+                        <i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

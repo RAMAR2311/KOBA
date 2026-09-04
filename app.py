@@ -84,6 +84,10 @@ def create_app():
     from routes.proveedores import providers_bp
     app.register_blueprint(providers_bp, url_prefix='/proveedores')
 
+    # Registro de Blueprint Clientes y Locales (Maneos)
+    from routes.clientes import clientes_bp
+    app.register_blueprint(clientes_bp, url_prefix='/clientes')
+
     # Context Processor Global: Estado de Pago del Servidor
     @app.context_processor
     def inject_pago_servidor():
