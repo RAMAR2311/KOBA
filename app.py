@@ -8,6 +8,63 @@ from flask_wtf.csrf import CSRFProtect
 # Importar la instancia de db desde models
 from models import db, User
 
+def _asegurar_columnas_db(app):
+    """Verifica y asegura que todas las columnas añadidas existan en la BD (SQLite / PostgreSQL) de forma automática."""
+    with app.app_context():
+        try:
+            db.create_all()
+            engine = db.engine
+            is_sqlite = engine.dialect.name == 'sqlite'
+            columnas_def = [
+                ("maneos", "valor_fijo", "NUMERIC(10, 2)"),
+                ("maneos", "variant_id", "INTEGER"),
+                ("maneos", "cliente_id", "INTEGER"),
+                ("maneos", "observacion", "TEXT"),
+                ("product_variants", "precio_costo", "NUMERIC(10, 2)"),
+                ("product_variants", "precio_minimo", "NUMERIC(10, 2)"),
+                ("product_variants", "precio_sugerido", "NUMERIC(10, 2)"),
+                ("users", "telefono", "VARCHAR(20)"),
+                ("sale_details", "variant_id", "INTEGER"),
+                ("sale_details", "nombre_manual", "VARCHAR(200)"),
+                ("sale_details", "precio_costo_manual", "NUMERIC(10, 2)"),
+                ("facturas_bodega_detalles", "variant_id", "INTEGER"),
+                ("facturas_bodega_detalles", "precio_venta", "NUMERIC(10, 2)"),
+                ("clientes", "creado_por_id", "INTEGER"),
+                ("clientes", "contacto_persona", "VARCHAR(100)"),
+                ("clientes", "local_numero", "VARCHAR(50)"),
+                ("clientes", "notas", "TEXT"),
+            ]
+            if is_sqlite:
+                for tabla, col, col_tipo in columnas_def:
+                    try:
+                        res = db.session.execute(db.text(f"PRAGMA table_info({tabla})")).fetchall()
+                        existing_cols = [r[1] for r in res]
+                        if col not in existing_cols:
+                            db.session.execute(db.text(f"ALTER TABLE {tabla} ADD COLUMN {col} {col_tipo}"))
+                            db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+            else:
+                for tabla, col, col_tipo in columnas_def:
+                    try:
+                        db.session.execute(db.text(f"ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {col} {col_tipo};"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+
+                for sql in [
+                    "ALTER TABLE clientes ALTER COLUMN documento_o_nit DROP NOT NULL;",
+                    "ALTER TABLE clientes ALTER COLUMN telefono DROP NOT NULL;"
+                ]:
+                    try:
+                        db.session.execute(db.text(sql))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+        except Exception as e:
+            # Nunca abortar arranque si la base de datos no está disponible en este instante
+            print("[Aviso Sincronización DB]", e)
+
 def create_app():
     app = Flask(__name__)
     
@@ -48,6 +105,9 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
     CSRFProtect(app)
+
+    # Sincronización automática de esquema (Asegura columnas nuevas en PostgreSQL/SQLite)
+    _asegurar_columnas_db(app)
     
     login_manager = LoginManager()
     login_manager.login_view = 'auth_bp.login'
