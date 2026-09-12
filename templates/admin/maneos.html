@@ -197,18 +197,48 @@
                             <i class="fa-solid fa-plus me-1"></i> Nuevo Local
                         </button>
                     </div>
-                    <select name="cliente_id" id="clienteSelectManeo" class="form-select bg-light border-0 shadow-sm" required>
-                        <option value="">— Seleccionar Local o Persona —</option>
-                        {% for c in clientes %}
-                            <option value="{{ c.id }}" {% if selected_cliente_id == c.id %}selected{% endif %}>
-                                {{ c.nombre_o_razon_social }}{% if c.local_numero %} ({{ c.local_numero }}){% endif %}{% if c.saldo_maneos_pendiente > 0 %} · [Debe ${{ '{:,.0f}'.format(c.saldo_maneos_pendiente) }}]{% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
+
+                    <!-- Buscador Inteligente de Locales / Clientes -->
+                    <div class="position-relative" id="comboboxClienteWrapper">
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-light border-0 text-muted ps-3">
+                                <i class="fa-solid fa-magnifying-glass text-primary" id="iconBuscarCliente"></i>
+                            </span>
+                            <input type="text" 
+                                   id="inputBuscarCliente" 
+                                   class="form-control bg-light border-0 fw-semibold text-brand-black py-2" 
+                                   placeholder="Escribe o busca un local..." 
+                                   autocomplete="off"
+                                   required>
+                            <button type="button" class="btn bg-light border-0 text-muted px-2 d-none" id="btnClearCliente" title="Limpiar selección">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                            <button type="button" class="btn bg-light border-0 text-muted pe-3" id="btnToggleDropdownCliente" tabindex="-1">
+                                <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem;"></i>
+                            </button>
+                        </div>
+
+                        <!-- Campos ocultos para envío del formulario -->
+                        <input type="hidden" name="cliente_id" id="cliente_id_hidden" value="{{ selected_cliente_id or '' }}">
+                        <input type="hidden" name="local_vecino" id="local_vecino_hidden" value="">
+
+                        <!-- Menú desplegable con filtrado inteligente (Prioridad al inicio de palabra/local) -->
+                        <div id="dropdownClientesList" 
+                             class="dropdown-menu shadow-lg border-0 rounded-3 w-100 p-1 mt-1 position-absolute" 
+                             style="max-height: 280px; overflow-y: auto; z-index: 1050; display: none;">
+                        </div>
+                    </div>
+
                     <div class="mt-2 d-flex justify-content-between align-items-center">
                         <a href="{{ url_for('clientes_bp.index') }}" class="small text-brand-blue text-decoration-none fw-semibold">
-                            <i class="fa-solid fa-users-line me-1"></i> Ver Directorio
+                            <i class="fa-solid fa-users-line me-1"></i> Ver Directorio Completo
                         </a>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-bold text-brand-black small mb-1">
+                            <i class="fa-regular fa-comment-dots text-primary me-1"></i> Observación del Maneo (Opcional)
+                        </label>
+                        <textarea name="observacion_general" class="form-control form-control-sm bg-light border-0 text-muted" rows="3" placeholder="Nota, acuerdo o detalles generales de este maneo..."></textarea>
                     </div>
                 </div>
                 <div class="text-end mt-4 mt-md-auto pt-3">
@@ -231,6 +261,7 @@
                     <th class="text-center">VALOR</th>
                     <th>LOCAL VECINO</th>
                     <th>PRODUCTO (SKU)</th>
+                    <th class="text-center">OBSERVACIÓN</th>
                     <th class="text-center">ESTADO</th>
                     <th class="text-center">ACCIONES RÁPIDAS</th>
                 </tr>
@@ -238,7 +269,11 @@
             <tbody>
                 {% for m in maneos %}
                 <tr>
-                    <td class="ps-4 text-center fw-bold text-brand-blue">{{ m.cantidad }} uds</td>
+                    <td class="ps-4 text-center">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 fs-6 fw-bold">
+                            {{ m.cantidad }} uds
+                        </span>
+                    </td>
                     <td class="text-center fw-bold text-success">
                         {% set precio_unit = (m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else (m.variante.precio_sugerido if m.variante else m.producto.precio_sugerido) %}
                         ${{ '{:,.0f}'.format(m.cantidad * precio_unit) }}
@@ -261,6 +296,79 @@
                         {% if m.variante %}
                             <br><span class="badge bg-light text-primary border border-primary border-opacity-25 rounded-pill px-2 mt-1" style="font-size: 0.75rem;"><i class="fa-solid fa-layer-group me-1"></i>{{ m.variante.nombre_variante }}</span>
                         {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if m.observacion %}
+                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Ver o editar nota registrada">
+                                <i class="fa-solid fa-comment-dots text-info me-1"></i> Ver Nota
+                            </button>
+                            <div class="small text-muted text-truncate mx-auto mt-1" style="max-width: 140px; font-size: 0.72rem;" title="{{ m.observacion }}">
+                                {{ m.observacion }}
+                            </div>
+                        {% else %}
+                            <button type="button" class="btn btn-sm btn-light rounded-pill px-2 py-1 text-muted border-0" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Agregar nota a este maneo">
+                                <i class="fa-regular fa-comment me-1"></i> + Nota
+                            </button>
+                        {% endif %}
+
+                        <!-- Modal Ver / Editar Observación -->
+                        <div class="modal fade text-start" id="modalObsManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg rounded-4">
+                                    <div class="modal-header border-0 bg-light">
+                                        <h5 class="modal-title fw-bold text-brand-black">
+                                            <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observaciones del Maneo #{{ m.id }}
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <!-- Resumen del Maneo -->
+                                        <div class="d-flex justify-content-between p-3 bg-light rounded-3 mb-3 border">
+                                            <div>
+                                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Local / Cliente</small>
+                                                <span class="fw-bold text-brand-black">{{ m.nombre_cliente_o_local }}</span>
+                                            </div>
+                                            <div class="text-end">
+                                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Producto</small>
+                                                <span class="fw-bold text-brand-blue">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
+                                                {% if m.variante %}
+                                                    <div class="small text-muted">[{{ m.variante.nombre_variante }}]</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Bloque de Nota Actual -->
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
+                                            {% if m.observacion %}
+                                                <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                                                    <p class="mb-0 text-brand-black" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-light border py-2 px-3 text-muted rounded-3 mb-0">
+                                                    <small><i class="fa-solid fa-circle-info me-1 text-primary"></i>Este maneo no tenía notas u observaciones al registrarse.</small>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Formulario para Modificar o Agregar Nota -->
+                                        <form method="POST" action="{{ url_for('admin_bp.maneos_guardar_observacion', id=m.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
+                                                <textarea name="observacion" class="form-control bg-light border-0 shadow-sm" rows="3" placeholder="Escribe aquí las observaciones...">{{ m.observacion or '' }}</textarea>
+                                            </div>
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                                                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </td>
                     <td class="text-center">
                         {% if m.estado == 'PENDIENTE' %}
@@ -340,29 +448,34 @@
                                 <!-- Modal Devolver -->
                                 <div class="modal fade text-start" id="devolverModal{{ m.id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered modal-sm">
-                                        <div class="modal-content border-0 shadow">
+                                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
                                             <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <div class="modal-header border-0 bg-light">
-                                                    <h5 class="modal-title fw-bold text-secondary"><i class="fa-solid fa-rotate-left me-2"></i>Devolver Unidades</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <div class="modal-header border-0 bg-light py-3 px-4">
+                                                    <h5 class="modal-title fw-bold text-dark mb-0">
+                                                        <i class="fa-solid fa-rotate-left text-secondary me-2"></i>Devolver Unidades
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                                                 </div>
-                                                <div class="modal-body p-4">
-                                                    <p class="mb-3">¿Cuántas unidades de <strong>{{ m.producto.nombre }}</strong>
-                                                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1">{{ m.variante.nombre_variante }}</span>{% endif %}
-                                                        devuelve <strong>{{ m.local_vecino }}</strong>?
+                                                <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
+                                                    <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
+                                                        ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
+                                                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
+                                                        devuelve <strong class="text-dark fw-bold">{{ m.local_vecino }}</strong>?
                                                     </p>
                                                     <div class="input-group input-group-lg mb-3">
-                                                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
-                                                        <span class="input-group-text border-0 bg-light text-muted fw-bold">/ {{ m.cantidad }} uds</span>
+                                                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
+                                                        <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
                                                     </div>
-                                                    <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #f0f4ff; border: 1px dashed #b0c4de;">
-                                                        <small class="text-muted"><i class="fa-solid fa-circle-info text-primary me-1"></i>Si devuelves menos de {{ m.cantidad }}, las unidades restantes quedarán <strong>pendientes de cobrar</strong>.</small>
+                                                    <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
+                                                        <small class="fw-medium"><i class="fa-solid fa-circle-info text-primary me-1"></i>Si devuelves menos de {{ m.cantidad }}, las unidades restantes quedarán <strong class="text-dark">pendientes de cobrar</strong>.</small>
                                                     </div>
                                                 </div>
-                                                <div class="modal-footer border-0">
-                                                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-secondary rounded-pill fw-bold px-4"><i class="fa-solid fa-rotate-left me-1"></i> Confirmar Devolución</button>
+                                                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-secondary rounded-pill fw-bold px-4 text-white shadow-sm">
+                                                        <i class="fa-solid fa-rotate-left me-1"></i> Confirmar Devolución
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -376,7 +489,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">
+                    <td colspan="7" class="text-center py-5 text-muted">
                         <i class="fa-solid fa-handshake-slash fs-2 mb-3 text-warning opacity-50"></i>
                         <p class="mb-0">No hay maneos o préstamos registrados.</p>
                     </td>
@@ -668,8 +781,219 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Por favor, ingresa al menos un producto a prestar en las filas.');
             const firstSku = filasContainer.querySelector('.sku-input');
             if (firstSku) firstSku.focus();
+            return;
+        }
+
+        // Validar selección de cliente o local vecino
+        if (!clienteIdHidden.value && !inputBuscarCliente.value.trim()) {
+            e.preventDefault();
+            alert('Por favor, busca o escribe el Local Vecino / Cliente a quien se le prestará.');
+            inputBuscarCliente.focus();
+            return;
+        }
+
+        if (!clienteIdHidden.value && inputBuscarCliente.value.trim()) {
+            localVecinoHidden.value = inputBuscarCliente.value.trim();
         }
     });
+
+    // ==========================================
+    // BUSCADOR INTELIGENTE DE LOCALES / CLIENTES
+    // Con prioridad de coincidencia al inicio del nombre/local
+    // ==========================================
+    const todosLosClientes = [
+        {% for c in clientes %}
+        {
+            id: {{ c.id }},
+            nombre: {{ c.nombre_o_razon_social|tojson }},
+            local: {{ (c.local_numero or '')|tojson }},
+            saldo: {{ (c.saldo_maneos_pendiente or 0)|float }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const inputBuscarCliente = document.getElementById('inputBuscarCliente');
+    const clienteIdHidden = document.getElementById('cliente_id_hidden');
+    const localVecinoHidden = document.getElementById('local_vecino_hidden');
+    const btnClearCliente = document.getElementById('btnClearCliente');
+    const btnToggleDropdownCliente = document.getElementById('btnToggleDropdownCliente');
+    const dropdownClientesList = document.getElementById('dropdownClientesList');
+    const comboboxWrapper = document.getElementById('comboboxClienteWrapper');
+
+    function normalizarTexto(str) {
+        return (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    }
+
+    function filtrarClientes(query) {
+        const q = normalizarTexto(query);
+        if (!q) {
+            return [...todosLosClientes].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        }
+
+        const matches = [];
+        todosLosClientes.forEach(c => {
+            const normNombre = normalizarTexto(c.nombre);
+            const normLocal = normalizarTexto(c.local);
+            const palabras = normNombre.split(/\s+/);
+
+            let score = 999;
+
+            // Prioridad 1: El nombre empieza exactamente con la letra/término (ej: "A" -> "ALEJA")
+            if (normNombre.startsWith(q)) {
+                score = 1;
+            }
+            // Prioridad 2: El número de local empieza con el término (ej: "1" -> "1188")
+            else if (normLocal && normLocal.startsWith(q)) {
+                score = 2;
+            }
+            // Prioridad 3: Alguna palabra interna del nombre empieza con el término (ej: "Boutique Andrea" -> "A")
+            else if (palabras.some(w => w.startsWith(q))) {
+                score = 3;
+            }
+            // Prioridad 4: Contiene el término dentro del nombre
+            else if (normNombre.includes(q)) {
+                score = 4;
+            }
+            // Prioridad 5: Contiene el término dentro del local
+            else if (normLocal && normLocal.includes(q)) {
+                score = 5;
+            }
+
+            if (score < 999) {
+                matches.push({ ...c, score });
+            }
+        });
+
+        // Ordenamiento con prioridad al inicio
+        matches.sort((a, b) => {
+            if (a.score !== b.score) return a.score - b.score;
+            return a.nombre.localeCompare(b.nombre);
+        });
+
+        return matches;
+    }
+
+    function renderDropdownClientes(lista) {
+        if (!dropdownClientesList) return;
+        dropdownClientesList.innerHTML = '';
+
+        if (lista.length === 0) {
+            dropdownClientesList.innerHTML = `
+                <div class="p-3 text-center text-muted small">
+                    <i class="fa-solid fa-store-slash d-block fs-5 mb-1 text-warning"></i>
+                    No se encontraron locales con ese criterio.
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 d-block mx-auto mt-1 fw-bold" data-bs-toggle="modal" data-bs-target="#modalCrearClienteRapido">
+                        + Registrar como Nuevo Local
+                    </button>
+                </div>
+            `;
+            dropdownClientesList.style.display = 'block';
+            return;
+        }
+
+        lista.forEach(c => {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'dropdown-item p-2 rounded-2 d-flex justify-content-between align-items-center mb-1';
+            item.style.whiteSpace = 'normal';
+
+            const saldoBadge = c.saldo > 0 
+                ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill ms-2" style="font-size:0.72rem;">Debe $${Math.round(c.saldo).toLocaleString('es-CO')}</span>`
+                : `<span class="badge bg-success bg-opacity-10 text-success rounded-pill ms-2" style="font-size:0.72rem;">Al día</span>`;
+
+            const localBadge = c.local ? `<span class="badge bg-light text-dark border ms-1">${c.local}</span>` : '';
+
+            item.innerHTML = `
+                <div class="d-flex align-items-center me-2">
+                    <i class="fa-solid fa-store text-muted me-2 small"></i>
+                    <span class="fw-bold text-brand-black">${c.nombre}</span>
+                    ${localBadge}
+                </div>
+                <div>${saldoBadge}</div>
+            `;
+
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                seleccionarCliente(c);
+            });
+
+            dropdownClientesList.appendChild(item);
+        });
+
+        dropdownClientesList.style.display = 'block';
+    }
+
+    function seleccionarCliente(c) {
+        if (!inputBuscarCliente) return;
+        inputBuscarCliente.value = c.nombre + (c.local ? ` (${c.local})` : '');
+        if (clienteIdHidden) clienteIdHidden.value = c.id;
+        if (localVecinoHidden) localVecinoHidden.value = c.nombre;
+        if (btnClearCliente) btnClearCliente.classList.remove('d-none');
+        if (dropdownClientesList) dropdownClientesList.style.display = 'none';
+        inputBuscarCliente.classList.remove('is-invalid');
+    }
+
+    function deseleccionarCliente() {
+        if (!inputBuscarCliente) return;
+        inputBuscarCliente.value = '';
+        if (clienteIdHidden) clienteIdHidden.value = '';
+        if (localVecinoHidden) localVecinoHidden.value = '';
+        if (btnClearCliente) btnClearCliente.classList.add('d-none');
+        inputBuscarCliente.focus();
+        renderDropdownClientes(filtrarClientes(''));
+    }
+
+    if (inputBuscarCliente) {
+        inputBuscarCliente.addEventListener('input', function() {
+            if (clienteIdHidden) clienteIdHidden.value = '';
+            if (localVecinoHidden) localVecinoHidden.value = this.value.trim();
+            if (this.value.trim()) {
+                if (btnClearCliente) btnClearCliente.classList.remove('d-none');
+            } else {
+                if (btnClearCliente) btnClearCliente.classList.add('d-none');
+            }
+            renderDropdownClientes(filtrarClientes(this.value));
+        });
+
+        inputBuscarCliente.addEventListener('focus', function() {
+            renderDropdownClientes(filtrarClientes(this.value));
+        });
+    }
+
+    if (btnClearCliente) {
+        btnClearCliente.addEventListener('click', function(e) {
+            e.preventDefault();
+            deseleccionarCliente();
+        });
+    }
+
+    if (btnToggleDropdownCliente) {
+        btnToggleDropdownCliente.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (dropdownClientesList && dropdownClientesList.style.display === 'block') {
+                dropdownClientesList.style.display = 'none';
+            } else {
+                renderDropdownClientes(filtrarClientes(inputBuscarCliente.value));
+                inputBuscarCliente.focus();
+            }
+        });
+    }
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', function(e) {
+        if (comboboxWrapper && !comboboxWrapper.contains(e.target)) {
+            if (dropdownClientesList) dropdownClientesList.style.display = 'none';
+        }
+    });
+
+    // Auto-seleccionar si vino cliente_id en la URL
+    const clienteIdPreseleccionado = {{ selected_cliente_id or 'null' }};
+    if (clienteIdPreseleccionado) {
+        const pre = todosLosClientes.find(c => c.id === clienteIdPreseleccionado);
+        if (pre) {
+            seleccionarCliente(pre);
+        }
+    }
 
     // AJAX para crear cliente rápido desde el modal
     function ejecutarGuardadoClienteRapido() {
@@ -716,18 +1040,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (data.success && data.cliente) {
-                const select = document.getElementById('clienteSelectManeo');
-                if (select) {
-                    let opt = select.querySelector(`option[value="${data.cliente.id}"]`);
-                    if (!opt) {
-                        opt = document.createElement('option');
-                        opt.value = data.cliente.id;
-                        opt.textContent = data.cliente.nombre + (data.cliente.local ? ` (${data.cliente.local})` : '');
-                        select.appendChild(opt);
-                    }
-                    select.value = data.cliente.id;
-                    select.dispatchEvent(new Event('change'));
-                }
+                const nuevoObj = {
+                    id: data.cliente.id,
+                    nombre: data.cliente.nombre,
+                    local: data.cliente.local || '',
+                    saldo: 0
+                };
+                todosLosClientes.push(nuevoObj);
+                seleccionarCliente(nuevoObj);
 
                 const modalEl = document.getElementById('modalCrearClienteRapido');
                 if (modalEl) {

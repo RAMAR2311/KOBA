@@ -26,7 +26,7 @@
 
     <!-- Botones de Acción Superior -->
     <div class="d-flex gap-2 flex-wrap">
-        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3">
+        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3 fw-bold">
             <i class="fa-solid fa-arrow-left me-1"></i> Directorio
         </a>
         <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold" id="btnCompartirWhatsApp">
@@ -35,7 +35,12 @@
         <button type="button" class="btn btn-outline-dark rounded-pill px-3 fw-bold" onclick="window.print()">
             <i class="fa-solid fa-print me-1"></i> Imprimir
         </button>
-        <a href="{{ url_for('admin_bp.maneos', cliente_id=cliente.id) }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
+        {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+            <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                <i class="fa-solid fa-cash-register me-1"></i> Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})
+            </button>
+        {% endif %}
+        <a href="{{ url_for('admin_bp.maneos', cliente_id=cliente.id) }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm text-white">
             <i class="fa-solid fa-handshake me-1"></i> Prestar Maneo
         </a>
     </div>
@@ -55,18 +60,27 @@
 <div class="row g-3 mb-4">
     <!-- Saldo Pendiente Actual -->
     <div class="col-md-6 col-lg-3">
-        <div class="card card-custom p-3 border-0 shadow-sm {% if saldo_pendiente > 0 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-white{% endif %} h-100">
-            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Saldo Pendiente por Cobrar</span>
-            <h3 class="fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %} my-1">
-                ${{ '{:,.0f}'.format(saldo_pendiente) }}
-            </h3>
-            <small class="text-muted">
-                {% if saldo_pendiente > 0 %}
-                    <i class="fa-solid fa-clock me-1 text-danger"></i>Cobro pendiente
-                {% else %}
-                    <i class="fa-solid fa-check me-1 text-success"></i>Sin dinero adeudado
-                {% endif %}
-            </small>
+        <div class="card card-custom p-3 border-0 shadow-sm {% if saldo_pendiente > 0 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-white{% endif %} h-100 d-flex flex-column justify-content-between">
+            <div>
+                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Saldo Pendiente por Cobrar</span>
+                <h3 class="fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %} my-1">
+                    ${{ '{:,.0f}'.format(saldo_pendiente) }}
+                </h3>
+                <small class="text-muted">
+                    {% if saldo_pendiente > 0 %}
+                        <i class="fa-solid fa-clock me-1 text-danger"></i>Cobro pendiente
+                    {% else %}
+                        <i class="fa-solid fa-check me-1 text-success"></i>Sin dinero adeudado
+                    {% endif %}
+                </small>
+            </div>
+            {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+                <div class="mt-2 pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                        <i class="fa-solid fa-cash-register me-1"></i> Cobrar Todo (${{ '{:,.0f}'.format(saldo_pendiente) }})
+                    </button>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -106,7 +120,7 @@
 
 <!-- Pestañas de Maneos -->
 <div class="card card-custom p-0 border-0 shadow-sm bg-white overflow-hidden">
-    <div class="card-header bg-light border-0 p-3">
+    <div class="card-header bg-light border-0 p-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
         <ul class="nav nav-pills gap-2" id="estadoCuentaTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active rounded-pill px-4 fw-bold" id="activos-tab" data-bs-toggle="tab" data-bs-target="#tab-activos" type="button" role="tab">
@@ -121,6 +135,11 @@
                 </button>
             </li>
         </ul>
+        {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                <i class="fa-solid fa-cash-register me-1"></i> Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})
+            </button>
+        {% endif %}
     </div>
 
     <div class="tab-content" id="estadoCuentaTabsContent">
@@ -130,11 +149,12 @@
                 <table class="table table-hover table-custom mb-0 align-middle">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4" width="140">FECHA</th>
+                            <th class="ps-4" width="130">FECHA</th>
                             <th>PRODUCTO PRESTADO</th>
-                            <th class="text-center" width="100">CANTIDAD</th>
-                            <th class="text-end" width="140">VALOR UND</th>
-                            <th class="text-end" width="150">SUBTOTAL</th>
+                            <th class="text-center" width="160">OBSERVACIÓN</th>
+                            <th class="text-center" width="90">CANT</th>
+                            <th class="text-end" width="130">VALOR UND</th>
+                            <th class="text-end" width="140">SUBTOTAL</th>
                             <th class="text-center pe-4" width="220">ACCIONES</th>
                         </tr>
                     </thead>
@@ -142,46 +162,142 @@
                         {% for m in maneos_activos %}
                         <tr>
                             <td class="ps-4 small text-muted">
-                                <div><strong>{{ m.fecha_prestamo.strftime('%d/%m/%Y') }}</strong></div>
+                                <div class="fw-bold text-brand-black">{{ m.fecha_prestamo.strftime('%d/%m/%Y') }}</div>
                                 <div style="font-size:0.75rem;">{{ m.fecha_prestamo.strftime('%H:%M') }}</div>
                             </td>
                             <td>
-                                <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
+                                <div class="fw-bold text-brand-black fs-6">{{ m.producto.nombre }}</div>
                                 {% if m.variante %}
                                     <span class="badge bg-light text-dark border"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</span>
                                 {% endif %}
-                                <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                                <small class="text-muted d-block mt-1">SKU: {{ m.producto.sku }}</small>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">{{ m.cantidad }}</span>
+                                {% if m.observacion %}
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-bold text-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalObsCliente{{ m.id }}" title="Ver o editar nota">
+                                            <i class="fa-solid fa-comment-dots text-primary me-1"></i> Ver Nota
+                                        </button>
+                                        <div class="small text-muted text-truncate mt-1 mx-auto" style="max-width: 140px; font-size: 0.75rem;" title="{{ m.observacion }}">
+                                            {{ m.observacion }}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-muted" data-bs-toggle="modal" data-bs-target="#modalObsCliente{{ m.id }}" title="Agregar nota a este maneo">
+                                        <i class="fa-regular fa-comment me-1"></i> + Nota
+                                    </button>
+                                {% endif %}
+
+                                <!-- Modal Observación Cliente -->
+                                <div class="modal fade text-start" id="modalObsCliente{{ m.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow-lg rounded-4">
+                                            <div class="modal-header border-0 bg-light">
+                                                <h5 class="modal-title fw-bold text-brand-black">
+                                                    <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observación del Maneo #{{ m.id }}
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body p-4">
+                                                <p class="mb-2 text-brand-black"><strong>Producto:</strong> {{ m.producto.nombre }} (x{{ m.cantidad }} uds)</p>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold small text-muted text-uppercase">Nota Actual:</label>
+                                                    {% if m.observacion %}
+                                                        <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                                                            <p class="mb-0 text-brand-black fw-medium" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="alert alert-light border py-2 px-3 text-muted rounded-3 mb-0">
+                                                            <small><i class="fa-solid fa-circle-info me-1 text-primary"></i>Sin notas u observaciones registradas previamente.</small>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                <form method="POST" action="{{ url_for('admin_bp.maneos_guardar_observacion', id=m.id) }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                    <input type="hidden" name="origen" value="estado_cuenta"/>
+                                                    <input type="hidden" name="cliente_id" value="{{ cliente.id }}"/>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
+                                                        <textarea name="observacion" class="form-control bg-light border-0 shadow-sm text-dark" rows="3" placeholder="Escribe aquí las observaciones o notas del maneo...">{{ m.observacion or '' }}</textarea>
+                                                    </div>
+                                                    <div class="d-flex justify-content-end gap-2">
+                                                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="text-end fw-semibold text-muted">
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 fw-bold">{{ m.cantidad }}</span>
+                            </td>
+                            <td class="text-end fw-bold text-secondary">
                                 ${{ '{:,.0f}'.format(m.valor_unitario_calculado) }}
                             </td>
                             <td class="text-end fw-bold text-danger fs-6">
                                 ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
                             </td>
                             <td class="text-center pe-4">
-                                <div class="d-flex justify-content-center gap-1">
+                                <div class="d-flex justify-content-center gap-2">
                                     <!-- Botón Facturar / Cobrar -->
                                     <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFacturar{{ m.id }}" title="Cobrar / Facturar este producto">
                                         <i class="fa-solid fa-cash-register me-1"></i> Cobrar
                                     </button>
-                                    <!-- Botón Devolver -->
-                                    <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}" onsubmit="return confirm('¿Confirmas que recibiste devuelto el producto intacto? Esto lo devolverá al stock físico de KOBA.');" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="origen" value="estado_cuenta">
-                                        <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Devolver producto intacto">
-                                            <i class="fa-solid fa-rotate-left"></i> Devolver
-                                        </button>
-                                    </form>
+
+                                    <!-- Botón Devolver con modal de cantidad -->
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#devolverModalCliente{{ m.id }}" title="Devolver unidades a Inventario">
+                                        <i class="fa-solid fa-rotate-left me-1"></i> Devolver
+                                    </button>
+
+                                    <!-- Modal Devolver Unidades en Estado de Cuenta -->
+                                    <div class="modal fade text-start" id="devolverModalCliente{{ m.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered modal-sm">
+                                            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
+                                                <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                    <input type="hidden" name="origen" value="estado_cuenta"/>
+                                                    <input type="hidden" name="cliente_id" value="{{ cliente.id }}"/>
+                                                    <div class="modal-header border-0 bg-light py-3 px-4">
+                                                        <h5 class="modal-title fw-bold text-dark mb-0">
+                                                            <i class="fa-solid fa-rotate-left text-secondary me-2"></i>Devolver Unidades
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
+                                                        <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
+                                                            ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
+                                                            {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
+                                                            devuelve <strong class="text-dark fw-bold">{{ cliente.nombre_o_razon_social }}</strong>?
+                                                        </p>
+                                                        <div class="input-group input-group-lg mb-3">
+                                                            <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
+                                                            <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
+                                                        </div>
+                                                        <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
+                                                            <small class="fw-medium"><i class="fa-solid fa-circle-info text-primary me-1"></i>Si devuelves menos de {{ m.cantidad }}, las unidades restantes quedarán <strong class="text-dark">pendientes de cobrar</strong>.</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                                                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-secondary rounded-pill fw-bold px-4 text-white shadow-sm">
+                                                            <i class="fa-solid fa-rotate-left me-1"></i> Confirmar Devolución
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-circle-check fs-1 text-success mb-2 opacity-50"></i>
                                 <p class="mb-0 fw-semibold text-brand-black">Este local no tiene maneos pendientes por resolver.</p>
                                 <small class="text-muted">Todo lo entregado ha sido liquidado o devuelto.</small>
@@ -202,6 +318,7 @@
                             <th class="ps-4">FECHA ENTREGA</th>
                             <th>FECHA RESOLUCIÓN</th>
                             <th>PRODUCTO</th>
+                            <th class="text-center" width="160">OBSERVACIÓN</th>
                             <th class="text-center">CANT</th>
                             <th class="text-end">SUBTOTAL</th>
                             <th class="text-center pe-4">ESTADO FINAL</th>
@@ -211,18 +328,59 @@
                         {% for m in maneos_historial %}
                         <tr>
                             <td class="ps-4 small text-muted">
-                                {{ m.fecha_prestamo.strftime('%d/%m/%Y %H:%M') if m.fecha_prestamo else '—' }}
+                                <div class="fw-bold text-brand-black">{{ m.fecha_prestamo.strftime('%d/%m/%Y') if m.fecha_prestamo else '—' }}</div>
+                                <div style="font-size:0.75rem;">{{ m.fecha_prestamo.strftime('%H:%M') if m.fecha_prestamo else '' }}</div>
                             </td>
                             <td class="small text-muted">
-                                {{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if m.fecha_resolucion else '—' }}
+                                <div class="fw-bold text-brand-black">{{ m.fecha_resolucion.strftime('%d/%m/%Y') if m.fecha_resolucion else '—' }}</div>
+                                <div style="font-size:0.75rem;">{{ m.fecha_resolucion.strftime('%H:%M') if m.fecha_resolucion else '' }}</div>
                             </td>
                             <td>
                                 <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
                                 {% if m.variante %}
-                                    <small class="text-muted">Subcat: {{ m.variante.nombre_variante }}</small>
+                                    <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</small>
+                                {% endif %}
+                                <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if m.observacion %}
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-bold text-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalObsHist{{ m.id }}" title="Ver nota de este maneo">
+                                            <i class="fa-solid fa-comment-dots text-primary me-1"></i> Ver Nota
+                                        </button>
+                                        <div class="small text-muted text-truncate mt-1 mx-auto" style="max-width: 140px; font-size: 0.75rem;" title="{{ m.observacion }}">
+                                            {{ m.observacion }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal Observación Historial -->
+                                    <div class="modal fade text-start" id="modalObsHist{{ m.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow-lg rounded-4">
+                                                <div class="modal-header border-0 bg-light">
+                                                    <h5 class="modal-title fw-bold text-brand-black">
+                                                        <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observación del Maneo Resuelto #{{ m.id }}
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-4">
+                                                    <p class="mb-2 text-brand-black"><strong>Producto:</strong> {{ m.producto.nombre }} (x{{ m.cantidad }} uds)</p>
+                                                    <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
+                                                    <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                                                        <p class="mb-0 text-brand-black fw-medium" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-0 bg-light">
+                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                            <td class="text-center fw-bold fs-6">{{ m.cantidad }}</td>
                             <td class="text-end fw-bold text-brand-black">
                                 ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
                             </td>
@@ -242,7 +400,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 No hay movimientos resueltos registrados para este cliente.
                             </td>
                         </tr>
@@ -358,6 +516,109 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 {% endfor %}
+
+{% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+<!-- Modal de Cobro Total de Todos los Maneos Activos -->
+<div class="modal fade" id="modalCobroTotal" tabindex="-1" aria-labelledby="modalCobroTotalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-success bg-opacity-10 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px;">
+                        <i class="fa-solid fa-cash-register fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalCobroTotalLabel">
+                            Cobro Total de Maneos Pendientes
+                        </h5>
+                        <small class="text-muted">Liquidación consolidada para <strong>{{ cliente.nombre_o_razon_social }}</strong></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="POST" action="{{ url_for('clientes_bp.cobro_total', id=cliente.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-body p-4">
+                    <!-- Resumen del Cobro Total -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded-3 border">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Total a Liquidar</span>
+                            <span class="fs-6 fw-semibold text-brand-black">{{ maneos_activos|length }} productos prestados ({{ unidades_pendientes }} unidades)</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Monto Total Consolidado</span>
+                            <span class="fs-3 fw-bold text-success">${{ '{:,.0f}'.format(saldo_pendiente) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Detalle de los productos a liquidar -->
+                    <label class="form-label fw-bold text-brand-black small text-uppercase mb-1">
+                        <i class="fa-solid fa-list-check me-1 text-primary"></i> Detalle de Productos a Cobrar:
+                    </label>
+                    <div class="table-responsive border rounded-3 mb-3" style="max-height: 220px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th class="ps-3 py-2 text-muted small fw-bold">PRODUCTO</th>
+                                    <th class="text-center py-2 text-muted small fw-bold">CANT</th>
+                                    <th class="text-end py-2 text-muted small fw-bold">PRECIO UND</th>
+                                    <th class="text-end pe-3 py-2 text-muted small fw-bold">SUBTOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in maneos_activos %}
+                                <tr>
+                                    <td class="ps-3 py-2">
+                                        <div class="fw-bold text-brand-black small">{{ m.producto.nombre }}</div>
+                                        {% if m.variante %}
+                                            <small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>{{ m.variante.nombre_variante }}</small>
+                                        {% endif %}
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">SKU: {{ m.producto.sku }}</small>
+                                    </td>
+                                    <td class="text-center py-2 fw-bold text-brand-black small">{{ m.cantidad }}</td>
+                                    <td class="text-end py-2 text-muted small">${{ '{:,.0f}'.format(m.valor_unitario_calculado) }}</td>
+                                    <td class="text-end pe-3 py-2 fw-bold text-danger small">${{ '{:,.0f}'.format(m.subtotal_calculado) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Medio de pago -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black">Medio de Pago a Recibir <span class="text-danger">*</span></label>
+                        <select name="metodo_pago" class="form-select bg-light border-0 shadow-sm py-2" required>
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Nequi</option>
+                            <option value="bancolombia">🏦 Bancolombia</option>
+                            <option value="daviplata">📱 Daviplata</option>
+                            <option value="tarjeta">💳 Tarjeta / Datáfono</option>
+                            <option value="transferencia">🔄 Transferencia Bancaria</option>
+                        </select>
+                    </div>
+
+                    <!-- Opción imprimir ticket -->
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="imprimir_ticket" id="checkImprimirTicketCobroTotal">
+                        <label class="form-check-label fw-semibold text-brand-black small" for="checkImprimirTicketCobroTotal">
+                            Generar / Ver ticket térmico de venta tras completar el cobro
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Cobro Total de ${{ '{:,.0f}'.format(saldo_pendiente) }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <style>
 @media print {

@@ -49,8 +49,12 @@
         
         .text-brand-black { color: var(--brand-black) !important; }
         .text-brand-pink { color: var(--brand-red) !important; }
-
-        /* Navbar Neon Vibe */
+        .text-brand-blue { color: #0f766e !important; }
+        
+        .modal-content {
+            color: #1e293b !important;
+            background-color: #ffffff !important;
+        }
         .navbar-custom {
             background-color: var(--brand-black);
             border-bottom: 2px solid var(--brand-red);
@@ -92,48 +96,50 @@
             box-shadow: var(--brand-neon-glow);
         }
 
-        .btn-blue { /* Botón secundario oscuro */
-            background-color: var(--brand-black);
-            color: var(--brand-red);
+        .btn-blue { /* Botón de acción destacado */
+            background-color: #0f766e;
+            color: #ffffff !important;
             font-weight: 600;
-            border: 1px solid var(--brand-red);
+            border: 1px solid #0f766e;
             transition: all 0.2s ease-in-out;
         }
         .btn-blue:hover {
-            background-color: var(--brand-red);
-            color: #000;
+            background-color: #115e59;
+            color: #ffffff !important;
             transform: translateY(-2px);
-            box-shadow: var(--brand-neon-glow);
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
         }
 
         /* Superficies */
         .card-custom {
             background-color: var(--brand-card-bg);
-            border: 1px solid #333;
+            border: 1px solid #e2e8f0;
             border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            color: #E0E0E0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            color: #1e293b;
         }
 
         /* Tablas */
         .table-custom {
-            background-color: var(--brand-card-bg);
+            background-color: #ffffff;
             border-radius: 12px;
-            color: #E0E0E0;
+            color: #1e293b;
         }
         .table-custom thead th {
-            color: var(--brand-red);
-            border-bottom: 2px solid var(--brand-red);
+            color: #0f766e;
+            background-color: #f8fafc;
+            border-bottom: 2px solid #0f766e;
             text-transform: uppercase;
             font-size: 0.75rem;
+            font-weight: 700;
             letter-spacing: 0.5px;
-            padding: 1.25rem 1rem;
+            padding: 1rem 1rem;
         }
         .table-custom tbody td {
-            padding: 1.25rem 1rem;
+            padding: 1rem 1rem;
             vertical-align: middle;
-            border-bottom: 1px solid #333;
-            color: #E0E0E0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
         }
 
         /* Sidebar Offcanvas Estilos (Dark Mode Adaptado a KOBA) */
@@ -150,7 +156,7 @@
             color: var(--brand-cyan) !important;
             text-shadow: 0 0 5px rgba(133,255,255,0.3);
         }
-        .btn-close {
+        .offcanvas .btn-close {
             filter: invert(1) grayscale(100%) brightness(200%);
         }
         .offcanvas-body .nav-link {

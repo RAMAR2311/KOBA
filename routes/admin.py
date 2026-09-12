@@ -165,6 +165,8 @@ def maneos_prestar():
     cantidades = request.form.getlist('cantidad[]') or request.form.getlist('cantidad')
     valores_fijos = request.form.getlist('valor_fijo[]') or request.form.getlist('valor_fijo')
     variant_ids = request.form.getlist('variant_id[]') or request.form.getlist('variant_id')
+    observaciones = request.form.getlist('observacion[]') or request.form.getlist('observacion')
+    observacion_general = (request.form.get('observacion_general') or '').strip()
 
     # Fallback si se envió como campo simple
     if not skus and request.form.get('sku'):
@@ -172,6 +174,7 @@ def maneos_prestar():
         cantidades = [request.form.get('cantidad', '1')]
         valores_fijos = [request.form.get('valor_fijo', '')]
         variant_ids = [request.form.get('variant_id', '')]
+        observaciones = [request.form.get('observacion', '')]
 
     items_a_procesar = []
     for idx, raw_sku in enumerate(skus):
@@ -205,11 +208,15 @@ def maneos_prestar():
                 valor_fijo = None
 
         var_id = variant_ids[idx] if idx < len(variant_ids) else ''
+        obs_raw = observaciones[idx] if idx < len(observaciones) else ''
+        obs_limpia = (observacion_general or (str(obs_raw).strip() if obs_raw and str(obs_raw).strip() else None))
+
         items_a_procesar.append({
             'sku': sku_str,
             'cantidad': cant,
             'valor_fijo': valor_fijo,
-            'variant_id': var_id
+            'variant_id': var_id,
+            'observacion': obs_limpia
         })
 
     if not items_a_procesar:
@@ -266,7 +273,8 @@ def maneos_prestar():
                 local_vecino=local_vecino,
                 cantidad=cantidad,
                 valor_fijo=valor_fijo,
-                estado='PENDIENTE'
+                estado='PENDIENTE',
+                observacion=item.get('observacion')
             )
             db.session.add(nuevo_maneo)
 
@@ -487,6 +495,25 @@ def maneos_devolver(id):
         flash(f'Error al procesar la devolución: {str(e)}', 'danger')
 
     return _redirigir()
+
+@admin_bp.route('/maneos/<int:id>/observacion', methods=['POST'])
+@login_required
+def maneos_guardar_observacion(id):
+    maneo = Maneo.query.get_or_404(id)
+    nueva_obs = request.form.get('observacion', '').strip()
+    maneo.observacion = nueva_obs if nueva_obs else None
+    try:
+        db.session.commit()
+        flash('Observación actualizada correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al guardar la observación: {e}', 'danger')
+    
+    origen = request.form.get('origen', '')
+    cliente_id = request.form.get('cliente_id')
+    if origen == 'estado_cuenta' and cliente_id:
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_id))
+    return redirect(url_for('admin_bp.maneos'))
 
 @admin_bp.route('/balance-financiero', methods=['GET', 'POST'])
 @login_required

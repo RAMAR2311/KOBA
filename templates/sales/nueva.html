@@ -141,6 +141,26 @@
                 </button>
             </div>
 
+            <!-- Interruptor para Imprimir Factura / Ticket (Desactivado por defecto) -->
+            <div class="card border-0 bg-light rounded-3 p-2 px-3 mb-3 mt-3 shadow-none">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="rounded-circle d-flex align-items-center justify-content-center" id="print_icon_wrapper" style="width: 32px; height: 32px; background: #e9ecef; color: #6c757d; transition: all 0.2s ease;">
+                            <i class="fa-solid fa-print"></i>
+                        </span>
+                        <div>
+                            <label class="form-check-label fw-bold small text-dark d-block mb-0" for="toggle_imprimir_recibo" style="cursor: pointer;">
+                                Imprimir Factura / Ticket
+                            </label>
+                            <small class="text-muted" id="print_status_label" style="font-size: 0.75rem;">Desactivado</small>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="toggle_imprimir_recibo" style="cursor: pointer; width: 2.75rem; height: 1.4rem;">
+                    </div>
+                </div>
+            </div>
+
             <!-- Botón de Cobro Masivo Azul Turquesa -->
             <div class="d-grid gap-2 mt-4">
                 <button type="button" class="btn btn-blue btn-lg rounded-3 py-3 shadow-sm text-uppercase" id="btn_process_sale">
@@ -292,9 +312,42 @@
     document.getElementById('btn_add_product').addEventListener('click', buscarYAgregarProducto);
     document.getElementById('btn_clear_cart').addEventListener('click', () => {
         carrito = [];
+        const togglePrint = document.getElementById('toggle_imprimir_recibo');
+        if (togglePrint) {
+            togglePrint.checked = false;
+            togglePrint.dispatchEvent(new Event('change'));
+        }
         renderizarCarrito();
         resetPagosMixtos();
     });
+
+    // Control dinámico del switch de impresión de factura
+    const togglePrintNueva = document.getElementById('toggle_imprimir_recibo');
+    const printStatusLabelNueva = document.getElementById('print_status_label');
+    const printIconWrapperNueva = document.getElementById('print_icon_wrapper');
+    if (togglePrintNueva) {
+        togglePrintNueva.addEventListener('change', function() {
+            if (this.checked) {
+                if (printStatusLabelNueva) {
+                    printStatusLabelNueva.innerText = 'Activado (Se abrirá para impresión)';
+                    printStatusLabelNueva.className = 'text-success fw-bold';
+                }
+                if (printIconWrapperNueva) {
+                    printIconWrapperNueva.style.background = '#d1e7dd';
+                    printIconWrapperNueva.style.color = '#0f5132';
+                }
+            } else {
+                if (printStatusLabelNueva) {
+                    printStatusLabelNueva.innerText = 'Desactivado';
+                    printStatusLabelNueva.className = 'text-muted';
+                }
+                if (printIconWrapperNueva) {
+                    printIconWrapperNueva.style.background = '#e9ecef';
+                    printIconWrapperNueva.style.color = '#6c757d';
+                }
+            }
+        });
+    }
 
 
     // Botón para agregar producto manual (prestado de otro local)
@@ -884,22 +937,34 @@
             const data = await response.json();
 
             if (response.ok) {
-                // FIX: Abre el Recibo PRIMERO antes de detener el código con la alerta. Así Chrome no lo detecta como Spam
-                let reciboWindow = window.open(`/sales/recibo/${data.sale_id}`, '_blank');
-                
-                // Si el navegador tiene un bloqueador de ventanas emergentes muy agresivo:
-                if (!reciboWindow) {
-                    alert('⚠️ Chrome bloqueó la pestaña emergente del recibo. Por favor, permite las ventanas emergentes (pop-ups) para koba.com en la barra superior.');
+                const imprimirTicket = document.getElementById('toggle_imprimir_recibo') && document.getElementById('toggle_imprimir_recibo').checked;
+
+                if (imprimirTicket) {
+                    // Abre el Recibo solo si el botón de impresión fue activado por el usuario
+                    let reciboWindow = window.open(`/sales/recibo/${data.sale_id}`, '_blank');
+                    
+                    // Si el navegador tiene un bloqueador de ventanas emergentes muy agresivo:
+                    if (!reciboWindow) {
+                        alert('⚠️ Chrome bloqueó la pestaña emergente del recibo. Por favor, permite las ventanas emergentes (pop-ups) para koba.com en la barra superior.');
+                    }
                 }
                 
                 // Alerta nativa solicitada para feedback directo (Mantiene pausada la pantalla de la Caja)
                 const tipoMsg = esMixto ? '(Pago Dividido)' : '';
-                alert(`✅ ¡Cobro en Caja Procesado ${tipoMsg}! El inventario ha sido descontado correctamente. ID: ${data.sale_id}`);
+                const printMsg = imprimirTicket ? ' (Generando impresión de factura...)' : '';
+                alert(`✅ ¡Cobro en Caja Procesado ${tipoMsg}! El inventario ha sido descontado correctamente. ID: ${data.sale_id}${printMsg}`);
                 
                 // Purgar carrito para el próximo comprador
                 carrito = [];
                 pagosMixtos = [];
                 
+                // Reiniciar el botón de impresión al estado desactivado por defecto
+                const togglePrint = document.getElementById('toggle_imprimir_recibo');
+                if (togglePrint) {
+                    togglePrint.checked = false;
+                    togglePrint.dispatchEvent(new Event('change'));
+                }
+
                 // Reinicia dinámicamente el CSS/Contador de caja visual a $0.00
                 renderizarCarrito(); 
                 resetPagosMixtos();

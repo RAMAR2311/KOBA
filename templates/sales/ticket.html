@@ -8,22 +8,36 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: #555555; /* Fondo oscuro simulando el escritorio detrás del papel */
+            background-color: #3d434a; /* Fondo sobrio simulando el escritorio */
             margin: 0;
-            padding: 30px;
+            padding: 20px 12px 40px;
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
             font-family: 'Roboto Mono', monospace, sans-serif;
+            box-sizing: border-box;
         }
-        
+
+        .nav-container {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .ticket {
             background-color: #FFFFFF;
             width: 100%;
-            max-width: 380px; /* Ancho de impresora térmica 80mm */
-            padding: 25px 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            color: #1A1A1A; /* Negro de nuestra paleta */
+            max-width: 400px; /* Ancho estándar de impresora térmica 80mm */
+            padding: 24px 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: #1A1A1A;
             box-sizing: border-box;
+            border-radius: 8px;
         }
 
         .header {
@@ -34,16 +48,18 @@
         }
 
         .logo {
-            font-size: 2.2rem;
+            font-size: 2.1rem;
             font-weight: 700;
-            margin: 0 0 10px 0;
-            letter-spacing: -1.5px;
+            margin: 0 0 8px 0;
+            letter-spacing: -1px;
+            word-break: break-word;
         }
 
         .info {
-            font-size: 0.9rem;
-            margin: 3px 0;
-            line-height: 1.5;
+            font-size: 0.88rem;
+            margin: 4px 0;
+            line-height: 1.4;
+            word-break: break-word;
         }
 
         .table-items {
@@ -61,71 +77,137 @@
         }
 
         .table-items td {
-            padding: 10px 0;
+            padding: 8px 0;
             vertical-align: top;
         }
 
         .col-qty { width: 15%; text-align: center; }
-        .col-prod { width: 55%; padding-right: 10px; }
+        .col-prod { width: 55%; padding-right: 8px; word-break: break-word; }
         .col-sub { width: 30%; text-align: right; }
 
         .totals {
             border-top: 2px dashed #1A1A1A;
-            padding-top: 20px;
-            margin-bottom: 25px;
+            padding-top: 18px;
+            margin-bottom: 20px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             font-weight: 700;
-            /* Branding Inyectado: Resalte estricto en Teal Koba (#008B8B) */
-            background-color: #008B8B;
+            background-color: #008B8B; /* Teal Koba */
             color: #FFFFFF;
-            padding: 12px 15px;
+            padding: 12px 14px;
             border-radius: 6px;
             border: 1px solid #1A1A1A;
         }
 
         .footer {
             text-align: center;
-            font-size: 0.85rem;
-            margin-top: 30px;
+            font-size: 0.82rem;
+            margin-top: 25px;
+            color: #333;
+        }
+
+        .actions-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 25px;
+            width: 100%;
+        }
+
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 48px; /* Táctil óptimo para dedo en móviles y tablets */
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            text-align: center;
         }
 
         .btn-print {
-            display: block;
-            width: 100%;
-            padding: 15px;
             background-color: #008B8B; /* Teal Koba */
             color: #FFFFFF;
-            border: 2px solid #008B8B;
-            font-size: 1.1rem;
+            border-color: #008B8B;
+        }
+
+        .btn-print:hover, .btn-print:active {
+            background-color: #006b6b;
+            border-color: #006b6b;
+            color: #FFFFFF;
+        }
+
+        .btn-back {
+            background-color: #1a1e21;
+            color: #FFFFFF;
+            border-color: #1a1e21;
+        }
+
+        .btn-back:hover, .btn-back:active {
+            background-color: #2c3237;
+            border-color: #2c3237;
+            color: #FFFFFF;
+        }
+
+        .btn-back-top {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 6px;
-            font-weight: bold;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 30px;
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             transition: 0.2s;
         }
 
-        .btn-print:hover {
-            background-color: #FFFFFF;
-            color: #008B8B;
+        .btn-back-top:hover {
+            background-color: rgba(255, 255, 255, 0.25);
         }
 
-        /* MEDIA QUERY DE IMPRESIÓN RIGUROSA: Las reglas CSS aquí omiten UI inútil al imprimir en papel */
+        /* MEDIA QUERY PARA DISPOSITIVOS PEQUEÑOS (Teléfonos < 480px) */
+        @media (max-width: 480px) {
+            body { padding: 12px 8px 30px; }
+            .ticket { padding: 18px 12px; border-radius: 6px; }
+            .logo { font-size: 1.8rem; }
+            .total-row { font-size: 1.2rem; padding: 10px 12px; }
+            .btn-action { min-height: 50px; font-size: 0.95rem; }
+        }
+
+        /* MEDIA QUERY DE IMPRESIÓN: Omite UI innecesaria al imprimir en papel */
         @media print {
-            body { background-color: #FFFFFF; padding: 0; display: block; }
-            .ticket { box-shadow: none; max-width: 100%; padding: 0; margin: 0 auto; width: 80mm; border: none; }
-            .btn-print { display: none; }
+            body { background-color: #FFFFFF !important; padding: 0 !important; display: block !important; }
+            .ticket { box-shadow: none !important; max-width: 100% !important; padding: 0 !important; margin: 0 auto !important; width: 80mm !important; border: none !important; border-radius: 0 !important; }
+            .no-print, .nav-container, .actions-group, .btn-action, .btn-print, .btn-back, .btn-back-top { display: none !important; }
             .total-row { background-color: transparent !important; border: none !important; padding: 10px 0 !important; }
-            .total-row * { color: #1A1A1A !important; } /* Desactivar Azul para impresiones monocromas */
+            .total-row * { color: #1A1A1A !important; }
         }
     </style>
 </head>
 <body>
+
+<!-- Barra de navegación rápida superior (visible en teléfono, tablet y PC) -->
+<div class="nav-container no-print">
+    <button type="button" class="btn-back-top" onclick="volverACaja()">
+        ⬅ Volver a la Caja
+    </button>
+</div>
 
 <div class="ticket">
     <div class="header">
@@ -156,7 +238,6 @@
             {% for detalle in venta.detalles %}
             <tr>
                 <td class="col-qty">{{ detalle.cantidad_vendida }}</td>
-                <!-- Cortar la longitud del título si es gigantesco para no descuadrar la ticketera -->
                 <td class="col-prod">
                     {% if detalle.nombre_manual %}
                         {{ detalle.nombre_manual[:40] }}{% if detalle.nombre_manual|length > 40 %}...{% endif %}
@@ -200,23 +281,52 @@
     </div>
 
     <div class="footer">
-        <p style="font-size: 1rem; font-weight: bold;">¡Gracias por tu compra!</p>
-        <p>Políticas de Tienda: Devoluciones únicamente presentando ticket impreso o digital.</p>
-        <p>Soporte: ventas@koba.com</p>
+        <p style="font-size: 1rem; font-weight: bold; margin-bottom: 5px;">¡Gracias por tu compra!</p>
+        <p style="margin: 4px 0;">Políticas de Tienda: Devoluciones únicamente presentando ticket impreso o digital.</p>
+        <p style="margin: 4px 0;">Soporte: ventas@koba.com</p>
     </div>
 
-    <button class="btn-print" onclick="window.print()">
-        [ IMPRIMIR TICKET ]
-    </button>
+    <!-- Botones de Acción: Volver y Re-imprimir -->
+    <div class="actions-group no-print">
+        <button type="button" class="btn-action btn-back" onclick="volverACaja()">
+            ⬅ Volver a la Caja
+        </button>
+        <button type="button" class="btn-action btn-print" onclick="window.print()">
+            🖨️ [ IMPRIMIR TICKET ]
+        </button>
+    </div>
 </div>
 
-<!-- Lógica de Auto-Impresión Reactiva -->
+<!-- Lógica de Auto-Impresión Reactiva y Navegación Inteligente -->
 <script>
-    // Evento silencioso que detona el pop-up de impresora nativo de Windows al renderizar
+    // Función para volver a la caja de forma segura en cualquier dispositivo
+    function volverACaja() {
+        // 1. Si se abrió en una pestaña secundaria o pop-up mediante window.open
+        if (window.opener && !window.opener.closed) {
+            try {
+                window.opener.focus();
+                window.close();
+                return;
+            } catch (e) {
+                // Si el navegador bloquea window.close()
+            }
+        }
+
+        // 2. Si vino referido de una de las cajas de venta
+        if (document.referrer && (document.referrer.includes('/sales/nueva') || document.referrer.includes('/sales/caja_visual'))) {
+            window.location.href = document.referrer;
+            return;
+        }
+
+        // 3. Fallback directo a la Caja Central de ventas
+        window.location.href = "{{ url_for('sales_bp.procesar_venta') }}";
+    }
+
+    // Evento silencioso que detona el pop-up de impresora nativo al renderizar
     window.onload = function() {
         setTimeout(() => {
             window.print();
-        }, 700); // 700ms de retraso para asegurar carga asíncrona de tipografías de Google
+        }, 700);
     };
 </script>
 

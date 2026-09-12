@@ -134,6 +134,26 @@
                 </button>
             </div>
 
+            <!-- Interruptor para Imprimir Factura / Ticket (Desactivado por defecto) -->
+            <div class="card border-0 bg-light rounded-3 p-2 px-3 mb-3 mt-3 shadow-none">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="rounded-circle d-flex align-items-center justify-content-center" id="print_icon_wrapper" style="width: 32px; height: 32px; background: #e9ecef; color: #6c757d; transition: all 0.2s ease;">
+                            <i class="fa-solid fa-print"></i>
+                        </span>
+                        <div>
+                            <label class="form-check-label fw-bold small text-dark d-block mb-0" for="toggle_imprimir_recibo" style="cursor: pointer;">
+                                Imprimir Factura / Ticket
+                            </label>
+                            <small class="text-muted" id="print_status_label" style="font-size: 0.75rem;">Desactivado</small>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="toggle_imprimir_recibo" style="cursor: pointer; width: 2.75rem; height: 1.4rem;">
+                    </div>
+                </div>
+            </div>
+
             <!-- Botón de Cobro Masivo -->
             <div class="d-grid gap-2 mt-auto">
                 <button type="button" class="btn btn-blue btn-lg rounded-3 py-3 shadow-sm text-uppercase" id="btn_process_sale">
@@ -492,10 +512,43 @@
         if(confirm('¿Seguro que deseas limpiar la venta?')){
             carrito = [];
             pagosMixtos = [];
+            const togglePrint = document.getElementById('toggle_imprimir_recibo');
+            if (togglePrint) {
+                togglePrint.checked = false;
+                togglePrint.dispatchEvent(new Event('change'));
+            }
             resetPagosMixtos();
             renderCart();
         }
     });
+
+    // Control dinámico del switch de impresión de factura
+    const togglePrintVisual = document.getElementById('toggle_imprimir_recibo');
+    const printStatusLabelVisual = document.getElementById('print_status_label');
+    const printIconWrapperVisual = document.getElementById('print_icon_wrapper');
+    if (togglePrintVisual) {
+        togglePrintVisual.addEventListener('change', function() {
+            if (this.checked) {
+                if (printStatusLabelVisual) {
+                    printStatusLabelVisual.innerText = 'Activado (Se abrirá para impresión)';
+                    printStatusLabelVisual.className = 'text-success fw-bold';
+                }
+                if (printIconWrapperVisual) {
+                    printIconWrapperVisual.style.background = '#d1e7dd';
+                    printIconWrapperVisual.style.color = '#0f5132';
+                }
+            } else {
+                if (printStatusLabelVisual) {
+                    printStatusLabelVisual.innerText = 'Desactivado';
+                    printStatusLabelVisual.className = 'text-muted';
+                }
+                if (printIconWrapperVisual) {
+                    printIconWrapperVisual.style.background = '#e9ecef';
+                    printIconWrapperVisual.style.color = '#6c757d';
+                }
+            }
+        });
+    }
 
     document.getElementById('btn_process_sale').addEventListener('click', async function() {
         if (carrito.length === 0) {
@@ -560,15 +613,24 @@
             const data = await response.json();
 
             if (response.ok) {
-                let reciboWindow = window.open(`/sales/recibo/${data.sale_id}`, '_blank');
-                if (!reciboWindow) {
-                    alert('⚠️ Chrome bloqueó la pestaña emergente del recibo.');
+                const imprimirTicket = document.getElementById('toggle_imprimir_recibo') && document.getElementById('toggle_imprimir_recibo').checked;
+                if (imprimirTicket) {
+                    let reciboWindow = window.open(`/sales/recibo/${data.sale_id}`, '_blank');
+                    if (!reciboWindow) {
+                        alert('⚠️ Chrome bloqueó la pestaña emergente del recibo.');
+                    }
                 }
                 
-                alert(`✅ ¡Cobro en Caja Procesado! ID: ${data.sale_id}`);
+                const printMsg = imprimirTicket ? ' (Generando impresión de factura...)' : '';
+                alert(`✅ ¡Cobro en Caja Procesado! ID: ${data.sale_id}${printMsg}`);
                 
                 carrito = [];
                 pagosMixtos = [];
+                const togglePrint = document.getElementById('toggle_imprimir_recibo');
+                if (togglePrint) {
+                    togglePrint.checked = false;
+                    togglePrint.dispatchEvent(new Event('change'));
+                }
                 resetPagosMixtos();
                 renderCart();
                 window.location.reload();

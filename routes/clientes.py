@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Cliente, Maneo, Product, ProductVariant, obtener_hora_bogota
+from models import db, Cliente, Maneo, Product, ProductVariant, Sale, SaleDetail, SalePayment, obtener_hora_bogota
 
 clientes_bp = Blueprint('clientes_bp', __name__)
 
@@ -239,3 +239,65 @@ def eliminar(id):
         flash(f'Error al eliminar cliente: {str(e)}', 'danger')
 
     return redirect(url_for('clientes_bp.index'))
+    
+@clientes_bp.route('/<int:id>/cobro_total', methods=['POST'])
+@login_required
+def cobro_total(id):
+    cliente = Cliente.query.get_or_404(id)
+    maneos_activos = [m for m in cliente.maneos if m.estado == 'PENDIENTE']
+
+    if not maneos_activos:
+        flash(f'"{cliente.nombre_o_razon_social}" no tiene maneos activos pendientes por cobrar.', 'info')
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    metodo_pago = request.form.get('metodo_pago', 'efectivo')
+    imprimir_ticket = bool(request.form.get('imprimir_ticket'))
+    hora_actual = obtener_hora_bogota()
+
+    try:
+        total_a_cobrar = sum(m.subtotal_calculado for m in maneos_activos)
+        total_unidades = sum(m.cantidad for m in maneos_activos)
+
+        # Crear una única venta consolidada para liquidar todos los maneos activos
+        nueva_venta = Sale(
+            vendedor_id=current_user.id,
+            monto_total=total_a_cobrar,
+            metodo_pago=metodo_pago,
+            fecha_venta=hora_actual
+        )
+        db.session.add(nueva_venta)
+        db.session.flush()
+
+        for m in maneos_activos:
+            pu = float(m.valor_unitario_calculado)
+            detalle = SaleDetail(
+                sale_id=nueva_venta.id,
+                product_id=m.product_id,
+                variant_id=m.variant_id,
+                cantidad_vendida=m.cantidad,
+                precio_venta_final=pu
+            )
+            db.session.add(detalle)
+
+            m.estado = 'FACTURADO'
+            m.fecha_resolucion = hora_actual
+
+        pago = SalePayment(
+            sale_id=nueva_venta.id,
+            metodo_pago=metodo_pago,
+            monto=total_a_cobrar
+        )
+        db.session.add(pago)
+
+        db.session.commit()
+        flash(f'¡Cobro total exitoso! Se liquidaron {len(maneos_activos)} productos ({total_unidades} uds) por un total de ${total_a_cobrar:,.0f} a través de {metodo_pago.capitalize()}.', 'success')
+
+        if imprimir_ticket:
+            return redirect(url_for('sales_bp.imprimir_ticket', sale_id=nueva_venta.id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al procesar el cobro total: {str(e)}', 'danger')
+
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
