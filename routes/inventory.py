@@ -18,7 +18,7 @@ def index():
     q = request.args.get('q', '').strip()
     per_page = 20
 
-    base_query = Product.query.filter_by(tipo_inventario=tipo)
+    base_query = Product.query.options(db.selectinload(Product.variantes)).filter_by(tipo_inventario=tipo)
     if q:
         from sqlalchemy import or_
         base_query = base_query.filter(
@@ -38,7 +38,7 @@ def index():
 
     # --- KPIs de Inventario ---
     # Se calcula sobre TODO el inventario (no solo la página actual)
-    todos = Product.query.filter_by(tipo_inventario=tipo).all()
+    todos = Product.query.options(db.selectinload(Product.variantes)).filter_by(tipo_inventario=tipo).all()
     total_productos = len(todos)
 
     valor_costo = 0.0

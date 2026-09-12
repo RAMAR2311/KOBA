@@ -23,14 +23,20 @@ def index():
             )
         )
 
-    todos_los_clientes = Cliente.query.all()
+    todos_los_clientes = Cliente.query.options(
+        db.selectinload(Cliente.maneos).joinedload(Maneo.producto),
+        db.selectinload(Cliente.maneos).joinedload(Maneo.variante)
+    ).all()
     # Calcular KPIs globales del módulo
     total_clientes = len(todos_los_clientes)
     total_saldo_calle = sum(c.saldo_maneos_pendiente for c in todos_los_clientes)
     total_unidades_calle = sum(c.unidades_maneos_pendientes for c in todos_los_clientes)
     clientes_con_deuda_count = sum(1 for c in todos_los_clientes if c.saldo_maneos_pendiente > 0)
 
-    lista_clientes = query.order_by(Cliente.nombre_o_razon_social.asc()).all()
+    lista_clientes = query.options(
+        db.selectinload(Cliente.maneos).joinedload(Maneo.producto),
+        db.selectinload(Cliente.maneos).joinedload(Maneo.variante)
+    ).order_by(Cliente.nombre_o_razon_social.asc()).all()
 
     if filtro == 'con_deuda':
         lista_clientes = [c for c in lista_clientes if c.saldo_maneos_pendiente > 0]
@@ -149,7 +155,10 @@ def api_crear_rapido():
 @clientes_bp.route('/<int:id>/estado_cuenta', methods=['GET'])
 @login_required
 def estado_cuenta(id):
-    cliente = Cliente.query.get_or_404(id)
+    cliente = Cliente.query.options(
+        db.selectinload(Cliente.maneos).joinedload(Maneo.producto),
+        db.selectinload(Cliente.maneos).joinedload(Maneo.variante)
+    ).get_or_404(id)
 
     # Ordenar maneos
     maneos_ordenados = sorted(cliente.maneos, key=lambda m: m.fecha_prestamo or obtener_hora_bogota(), reverse=True)

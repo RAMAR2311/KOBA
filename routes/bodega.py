@@ -275,7 +275,7 @@ def caja_rapida():
             flash(f'Ocurrió un error al registrar la venta.', 'danger')
             return redirect(url_for('bodega_bp.caja_rapida'))
 
-    productos = Product.query.filter_by(tipo_inventario='bodega').order_by(Product.nombre.asc()).all()
+    productos = Product.query.options(db.selectinload(Product.variantes)).filter_by(tipo_inventario='bodega').order_by(Product.nombre.asc()).all()
     clientes = Cliente.query.order_by(Cliente.nombre_o_razon_social.asc()).all()
     
     return render_template('bodega/caja_rapida.html', productos=productos, clientes=clientes)

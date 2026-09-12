@@ -119,11 +119,15 @@ def dashboard():
 @admin_bp.route('/maneos')
 @login_required
 def maneos():
-    lista_maneos = Maneo.query.order_by(Maneo.fecha_prestamo.desc()).all()
+    lista_maneos = Maneo.query.options(
+        db.joinedload(Maneo.producto),
+        db.joinedload(Maneo.variante),
+        db.joinedload(Maneo.cliente)
+    ).order_by(Maneo.fecha_prestamo.desc()).all()
     # Priorizar PENDIENTE temporalmente
     lista_maneos.sort(key=lambda m: 0 if m.estado == 'PENDIENTE' else 1)
     
-    productos = Product.query.order_by(Product.nombre).all()
+    productos = Product.query.options(db.selectinload(Product.variantes)).order_by(Product.nombre).all()
     clientes = Cliente.query.order_by(Cliente.nombre_o_razon_social.asc()).all()
     selected_cliente_id = request.args.get('cliente_id', type=int)
     return render_template(

@@ -487,6 +487,6 @@ def catalogo():
 def caja_visual():
     from models import obtener_hora_bogota
     hoy_bogota = obtener_hora_bogota()
-    productos = Product.query.filter(Product.tipo_inventario == 'tienda').order_by(Product.nombre.asc()).all()
+    productos = Product.query.options(db.selectinload(Product.variantes)).filter(Product.tipo_inventario == 'tienda').order_by(Product.nombre.asc()).all()
     return render_template('sales/caja_visual.html', productos=productos, hoy=hoy_bogota.strftime('%Y-%m-%d'))
 

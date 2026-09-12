@@ -16,6 +16,12 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icons/icon-192x192.png') }}">
     <meta name="theme-color" content="#F8F9FA">
 
+    <!-- Preconnects CDN para acelerar carga en datos móviles -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
@@ -42,6 +48,15 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* Feedback táctil inmediato en móvil (elimina sensación de lentitud al pulsar) */
+        button:active, 
+        .btn:active, 
+        .nav-link:active, 
+        .product-card:active {
+            transform: scale(0.97) !important;
+            transition: transform 0.06s ease-in-out !important;
+        }
+
         /* Clases base en modo claro */
         .bg-brand-blue { background-color: var(--brand-card-bg) !important; color: var(--brand-black); border: 1px solid #dee2e6; }
         .bg-brand-pink { background-color: var(--brand-red) !important; color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -58,15 +73,38 @@
         .navbar-custom {
             background-color: var(--brand-black);
             border-bottom: 2px solid var(--brand-red);
-            padding: 1rem 0;
+            padding: 0.85rem 0;
             box-shadow: 0 4px 15px rgba(0, 255, 255, 0.15);
         }
         
         .navbar-custom .navbar-brand {
             font-weight: 800;
             color: var(--brand-white) !important;
-            font-size: 1.75rem;
+            font-size: 1.6rem;
             letter-spacing: -0.5px;
+            white-space: nowrap;
+        }
+
+        /* Optimización en celulares para que el badge de Zenic y el nombre del local no colisionen */
+        @media (max-width: 575.98px) {
+            .navbar-custom {
+                padding: 0.55rem 0 !important;
+            }
+            .navbar-custom .navbar-brand {
+                font-size: 1.15rem !important;
+                letter-spacing: -0.3px;
+            }
+            .navbar-custom .navbar-brand img {
+                height: 26px !important;
+                margin-right: 0.35rem !important;
+            }
+            .zenic-badge {
+                font-size: 0.72rem !important;
+                padding: 0.2rem 0.55rem !important;
+            }
+            .zenic-badge i {
+                font-size: 0.78rem !important;
+            }
         }
 
         .navbar-custom .nav-link {
@@ -205,16 +243,18 @@
                 {% if current_user.is_authenticated and current_user.rol == 'admin' %}
                     {% if pago_servidor.estado == 'pagado' or pago_servidor.estado == 'al_dia' %}
                     <button type="button" 
-                            class="btn btn-sm px-2 px-md-3 py-1 rounded-pill fw-bold d-flex align-items-center gap-1 shadow-sm text-nowrap"
+                            class="btn btn-sm px-2 px-md-3 py-1 rounded-pill fw-bold d-flex align-items-center gap-1 shadow-sm text-nowrap zenic-badge"
                             style="background-color: #d1e7dd; color: #0f5132; border: 1.5px solid #0f5132; font-size: 0.82rem;"
                             data-bs-toggle="modal" 
-                            data-bs-target="#modalPagoServidor">
+                            data-bs-target="#modalPagoServidor"
+                            title="Servidor Zenic: Al día">
                         <i class="fa-solid fa-circle-check" style="color: #0f5132;"></i>
-                        <span>✓ Zenic: Al día</span>
+                        <span class="d-none d-sm-inline">Zenic: Al día</span>
+                        <span class="d-sm-none">Zenic al día</span>
                     </button>
                     {% endif %}
                 {% else %}
-                    <div style="width: 40px;"></div>
+                    <div style="width: 36px;"></div>
                 {% endif %}
             </div>
         </div>
@@ -223,11 +263,18 @@
 
     {% if current_user.is_authenticated %}
     <!-- Offcanvas Menú Lateral (Sidebar) -->
-    <div class="offcanvas offcanvas-start border-0 shadow" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" style="width: 280px;">
-        <div class="offcanvas-header bg-brand-pink border-bottom">
-            <h5 class="offcanvas-title fw-bold text-brand-black" id="offcanvasNavbarLabel">
-                <i class="fa-solid fa-user-circle me-2"></i>{{ current_user.rol | capitalize }}
-            </h5>
+    <div class="offcanvas offcanvas-start border-0 shadow" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" style="width: 290px;">
+        <div class="offcanvas-header bg-brand-pink border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="offcanvas-title fw-bold text-white m-0" id="offcanvasNavbarLabel">
+                    <i class="fa-solid fa-user-circle me-1"></i>{{ current_user.rol | capitalize }}
+                </h5>
+                {% if current_user.rol == 'admin' and (pago_servidor.estado == 'pagado' or pago_servidor.estado == 'al_dia') %}
+                <span class="badge bg-white text-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.70rem; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
+                    <i class="fa-solid fa-circle-check text-success me-1"></i>Zenic al día
+                </span>
+                {% endif %}
+            </div>
             <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-0">
