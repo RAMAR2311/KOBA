@@ -310,65 +310,6 @@
                                 <i class="fa-regular fa-comment me-1"></i> + Nota
                             </button>
                         {% endif %}
-
-                        <!-- Modal Ver / Editar Observación -->
-                        <div class="modal fade text-start" id="modalObsManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content border-0 shadow-lg rounded-4">
-                                    <div class="modal-header border-0 bg-light">
-                                        <h5 class="modal-title fw-bold text-brand-black">
-                                            <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observaciones del Maneo #{{ m.id }}
-                                        </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body p-4">
-                                        <!-- Resumen del Maneo -->
-                                        <div class="d-flex justify-content-between p-3 bg-light rounded-3 mb-3 border">
-                                            <div>
-                                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Local / Cliente</small>
-                                                <span class="fw-bold text-brand-black">{{ m.nombre_cliente_o_local }}</span>
-                                            </div>
-                                            <div class="text-end">
-                                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Producto</small>
-                                                <span class="fw-bold text-brand-blue">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
-                                                {% if m.variante %}
-                                                    <div class="small text-muted">[{{ m.variante.nombre_variante }}]</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-
-                                        <!-- Bloque de Nota Actual -->
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
-                                            {% if m.observacion %}
-                                                <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
-                                                    <p class="mb-0 text-brand-black" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
-                                                </div>
-                                            {% else %}
-                                                <div class="alert alert-light border py-2 px-3 text-muted rounded-3 mb-0">
-                                                    <small><i class="fa-solid fa-circle-info me-1 text-primary"></i>Este maneo no tenía notas u observaciones al registrarse.</small>
-                                                </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Formulario para Modificar o Agregar Nota -->
-                                        <form method="POST" action="{{ url_for('admin_bp.maneos_guardar_observacion', id=m.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
-                                                <textarea name="observacion" class="form-control bg-light border-0 shadow-sm" rows="3" placeholder="Escribe aquí las observaciones...">{{ m.observacion or '' }}</textarea>
-                                            </div>
-                                            <div class="d-flex justify-content-end gap-2">
-                                                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-                                                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                                                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </td>
                     <td class="text-center">
                         {% if m.estado == 'PENDIENTE' %}
@@ -388,99 +329,10 @@
                                 <button type="button" class="btn btn-sm btn-success rounded-pill" data-bs-toggle="modal" data-bs-target="#facturarModal{{ m.id }}" title="Facturar Venta">
                                     <i class="fa-solid fa-cash-register me-1"></i> Cobrar
                                 </button>
-                                <!-- Modal Facturar -->
-                                <div class="modal fade text-start" id="facturarModal{{ m.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow">
-                                            <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <div class="modal-header border-0 bg-light">
-                                                    <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-sack-dollar me-2"></i>Facturar Maneo</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body p-4">
-                                                    <p>Registrarás la venta del producto <strong>{{ m.producto.nombre }}</strong>
-                                                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1">{{ m.variante.nombre_variante }}</span>{% endif %}
-                                                        entregado a <strong>{{ m.local_vecino }}</strong>.</p>
-                                                    
-                                                    <div class="row w-100 g-2 mt-2">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-bold">Cantidad</label>
-                                                            <div class="input-group">
-                                                                <input type="number" name="cantidad_vendida" class="form-control bg-light border-0" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
-                                                                <span class="input-group-text border-0 bg-light text-muted">/ {{ m.cantidad }}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-bold">Precio Unitario</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text border-0 bg-light text-success fw-bold">$</span>
-                                                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="mt-3">
-                                                        <label class="form-label fw-bold">Medio de Pago a Recibir</label>
-                                                        <select name="metodo_pago" class="form-select bg-light border-0" required>
-                                                            <option value="efectivo">💵 Efectivo directo a Caja</option>
-                                                            <option value="nequi">📱 Ingresará a Medio Digital (Nequi)</option>
-                                                            <option value="bancolombia">🏦 Ingresará a Medio Digital (Bancolombia)</option>
-                                                            <option value="daviplata">📱 Ingresará a Medio Digital (Daviplata)</option>
-                                                        </select>
-                                                    </div>
-                                                    
-                                                    <small class="text-muted mt-3 d-block">Nota: Si cobras menos de {{ m.cantidad }}, el sistema devolverá automáticamente el resto de unidades al inventario.</small>
-                                                </div>
-                                                <div class="modal-footer border-0">
-                                                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-success rounded-pill fw-bold px-4">Confirmar y Facturar</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                
                                 <!-- Botón Devolver -->
                                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-bs-toggle="modal" data-bs-target="#devolverModal{{ m.id }}" title="Devolver a Inventario">
                                     <i class="fa-solid fa-rotate-left"></i> Devolver
                                 </button>
-                                <!-- Modal Devolver -->
-                                <div class="modal fade text-start" id="devolverModal{{ m.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered modal-sm">
-                                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
-                                            <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <div class="modal-header border-0 bg-light py-3 px-4">
-                                                    <h5 class="modal-title fw-bold text-dark mb-0">
-                                                        <i class="fa-solid fa-rotate-left text-secondary me-2"></i>Devolver Unidades
-                                                    </h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                                                </div>
-                                                <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
-                                                    <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
-                                                        ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
-                                                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
-                                                        devuelve <strong class="text-dark fw-bold">{{ m.local_vecino }}</strong>?
-                                                    </p>
-                                                    <div class="input-group input-group-lg mb-3">
-                                                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
-                                                        <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
-                                                    </div>
-                                                    <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
-                                                        <small class="fw-medium"><i class="fa-solid fa-circle-info text-primary me-1"></i>Si devuelves menos de {{ m.cantidad }}, las unidades restantes quedarán <strong class="text-dark">pendientes de cobrar</strong>.</small>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
-                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-secondary rounded-pill fw-bold px-4 text-white shadow-sm">
-                                                        <i class="fa-solid fa-rotate-left me-1"></i> Confirmar Devolución
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         {% else %}
                             <span class="text-muted small"><i class="fa-solid fa-check text-success"></i> Completado</span>
@@ -499,6 +351,160 @@
         </table>
     </div>
 </div>
+
+<!-- Modales de Maneos (Observación, Facturación y Devolución) fuera de la tabla -->
+{% for m in maneos %}
+<!-- Modal Ver / Editar Observación -->
+<div class="modal fade text-start" id="modalObsManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold text-brand-black">
+                    <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observaciones del Maneo #{{ m.id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Resumen del Maneo -->
+                <div class="d-flex justify-content-between p-3 bg-light rounded-3 mb-3 border">
+                    <div>
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Local / Cliente</small>
+                        <span class="fw-bold text-brand-black">{{ m.nombre_cliente_o_local }}</span>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Producto</small>
+                        <span class="fw-bold text-brand-blue">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
+                        {% if m.variante %}
+                            <div class="small text-muted">[{{ m.variante.nombre_variante }}]</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Bloque de Nota Actual -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
+                    {% if m.observacion %}
+                        <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                            <p class="mb-0 text-brand-black" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light border py-2 px-3 text-muted rounded-3 mb-0">
+                            <small><i class="fa-solid fa-circle-info me-1 text-primary"></i>Este maneo no tenía notas u observaciones al registrarse.</small>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Formulario para Modificar o Agregar Nota -->
+                <form method="POST" action="{{ url_for('admin_bp.maneos_guardar_observacion', id=m.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
+                        <textarea name="observacion" class="form-control bg-light border-0 shadow-sm" rows="3" placeholder="Escribe aquí las observaciones...">{{ m.observacion or '' }}</textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if m.estado == 'PENDIENTE' %}
+<!-- Modal Facturar -->
+<div class="modal fade text-start" id="facturarModal{{ m.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header border-0 bg-light">
+                    <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-sack-dollar me-2"></i>Facturar Maneo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p>Registrarás la venta del producto <strong>{{ m.producto.nombre }}</strong>
+                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1">{{ m.variante.nombre_variante }}</span>{% endif %}
+                        entregado a <strong>{{ m.local_vecino }}</strong>.</p>
+                    
+                    <div class="row w-100 g-2 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cantidad</label>
+                            <div class="input-group">
+                                <input type="number" name="cantidad_vendida" class="form-control bg-light border-0" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
+                                <span class="input-group-text border-0 bg-light text-muted">/ {{ m.cantidad }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Precio Unitario</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light text-success fw-bold">$</span>
+                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label fw-bold">Medio de Pago a Recibir</label>
+                        <select name="metodo_pago" class="form-select bg-light border-0" required>
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Ingresará a Medio Digital (Nequi)</option>
+                            <option value="bancolombia">🏦 Ingresará a Medio Digital (Bancolombia)</option>
+                            <option value="daviplata">📱 Ingresará a Medio Digital (Daviplata)</option>
+                        </select>
+                    </div>
+                    
+                    <small class="text-muted mt-3 d-block">Nota: Si cobras menos de {{ m.cantidad }}, el sistema devolverá automáticamente el resto de unidades al inventario.</small>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill fw-bold px-4">Confirmar y Facturar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Devolver -->
+<div class="modal fade text-start" id="devolverModal{{ m.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
+            <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header border-0 bg-light py-3 px-4">
+                    <h5 class="modal-title fw-bold text-dark mb-0">
+                        <i class="fa-solid fa-rotate-left text-secondary me-2"></i>Devolver Unidades
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
+                    <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
+                        ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
+                        {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
+                        devuelve <strong class="text-dark fw-bold">{{ m.local_vecino }}</strong>?
+                    </p>
+                    <div class="input-group input-group-lg mb-3">
+                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
+                        <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
+                    </div>
+                    <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
+                        <small class="fw-medium"><i class="fa-solid fa-circle-info text-primary me-1"></i>Si devuelves menos de {{ m.cantidad }}, las unidades restantes quedarán <strong class="text-dark">pendientes de cobrar</strong>.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-secondary rounded-pill fw-bold px-4 text-white shadow-sm">
+                        <i class="fa-solid fa-rotate-left me-1"></i> Confirmar Devolución
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 
 <!-- Modal Rápido para Crear Cliente / Local -->
 <div class="modal fade" id="modalCrearClienteRapido" tabindex="-1" aria-labelledby="modalCrearClienteRapidoLabel" aria-hidden="true">
