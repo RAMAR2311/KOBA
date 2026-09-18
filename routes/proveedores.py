@@ -30,10 +30,13 @@ def index():
         })
     return render_template('admin/proveedores/index.html', proveedores_data=proveedores_data)
 
-@providers_bp.route('/crear', methods=['POST'])
+@providers_bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def crear():
+    if request.method == 'GET':
+        return redirect(url_for('providers_bp.index'))
+
     nombre = request.form.get('nombre', '').strip()
     empresa = request.form.get('empresa', '').strip()
     telefono = request.form.get('telefono', '').strip()
