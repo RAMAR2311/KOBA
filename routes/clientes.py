@@ -240,6 +240,125 @@ def eliminar(id):
 
     return redirect(url_for('clientes_bp.index'))
     
+def _procesar_pagos_venta(tipo_pago, total_a_cobrar, form_data):
+    """
+    Parsea y valida los pagos únicos o divididos para una liquidación de maneos.
+    Retorna (metodo_pago_principal, lista_de_pagos_dict, error_msg).
+    """
+    from decimal import Decimal
+    total_decimal = Decimal(str(total_a_cobrar))
+    
+    if tipo_pago == 'dividido':
+        metodo_1 = form_data.get('metodo_pago_1', 'efectivo').strip()
+        monto_1_str = form_data.get('monto_1', '0').replace('$', '').replace('.', '').replace(',', '').strip() or '0'
+        metodo_2 = form_data.get('metodo_pago_2', 'nequi').strip()
+        monto_2_str = form_data.get('monto_2', '0').replace('$', '').replace('.', '').replace(',', '').strip() or '0'
+        
+        try:
+            monto_1 = Decimal(monto_1_str)
+            monto_2 = Decimal(monto_2_str)
+        except Exception:
+            return None, None, "Los montos ingresados para el pago dividido no son válidos."
+            
+        if monto_1 <= 0 or monto_2 <= 0:
+            return None, None, "En pago dividido, ambos métodos deben tener un monto mayor a $0."
+            
+        if abs((monto_1 + monto_2) - total_decimal) > Decimal('1.00'):
+            return None, None, f"La suma de los pagos (${(monto_1+monto_2):,.0f}) no coincide con el total a cobrar (${total_decimal:,.0f})."
+            
+        if (monto_1 + monto_2) != total_decimal:
+            monto_2 = total_decimal - monto_1
+            
+        metodo_principal = f"{metodo_1}+{metodo_2}"
+        pagos = [
+            {'metodo': metodo_1, 'monto': monto_1},
+            {'metodo': metodo_2, 'monto': monto_2}
+        ]
+        return metodo_principal, pagos, None
+    else:
+        metodo = form_data.get('metodo_pago', 'efectivo').strip()
+        pagos = [
+            {'metodo': metodo, 'monto': total_decimal}
+        ]
+        return metodo, pagos, None
+
+@clientes_bp.route('/<int:id>/cobro_seleccionados', methods=['POST'])
+@login_required
+def cobro_seleccionados(id):
+    cliente = Cliente.query.get_or_404(id)
+    
+    # Obtener IDs seleccionados desde formulario
+    maneo_ids_raw = request.form.getlist('maneo_ids')
+    if not maneo_ids_raw and request.form.get('maneo_ids_csv'):
+        maneo_ids_raw = [x.strip() for x in request.form.get('maneo_ids_csv', '').split(',') if x.strip()]
+        
+    selected_ids = [int(x) for x in maneo_ids_raw if str(x).isdigit()]
+    
+    if not selected_ids:
+        flash('Debes seleccionar al menos un producto para cobrar.', 'warning')
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+        
+    maneos_a_cobrar = [m for m in cliente.maneos if m.estado == 'PENDIENTE' and m.id in selected_ids]
+    
+    if not maneos_a_cobrar:
+        flash('No se encontraron maneos pendientes activos con los IDs seleccionados.', 'warning')
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    total_a_cobrar = sum(m.subtotal_calculado for m in maneos_a_cobrar)
+    total_unidades = sum(m.cantidad for m in maneos_a_cobrar)
+    tipo_pago = request.form.get('tipo_pago', 'unico')
+    imprimir_ticket = bool(request.form.get('imprimir_ticket'))
+    hora_actual = obtener_hora_bogota()
+
+    metodo_principal, pagos_list, error_msg = _procesar_pagos_venta(tipo_pago, total_a_cobrar, request.form)
+    if error_msg:
+        flash(error_msg, 'danger')
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    try:
+        nueva_venta = Sale(
+            vendedor_id=current_user.id,
+            monto_total=total_a_cobrar,
+            metodo_pago=metodo_principal,
+            fecha_venta=hora_actual
+        )
+        db.session.add(nueva_venta)
+        db.session.flush()
+
+        for m in maneos_a_cobrar:
+            pu = float(m.valor_unitario_calculado)
+            detalle = SaleDetail(
+                sale_id=nueva_venta.id,
+                product_id=m.product_id,
+                variant_id=m.variant_id,
+                cantidad_vendida=m.cantidad,
+                precio_venta_final=pu
+            )
+            db.session.add(detalle)
+            m.estado = 'FACTURADO'
+            m.fecha_resolucion = hora_actual
+
+        for p in pagos_list:
+            pago_obj = SalePayment(
+                sale_id=nueva_venta.id,
+                metodo_pago=p['metodo'],
+                monto=p['monto']
+            )
+            db.session.add(pago_obj)
+
+        db.session.commit()
+        metodo_desc = "Pago Dividido (" + " + ".join([f"{p['metodo'].capitalize()} ${p['monto']:,.0f}" for p in pagos_list]) + ")" if len(pagos_list) > 1 else pagos_list[0]['metodo'].capitalize()
+        flash(f'¡Cobro exitoso! Se liquidaron {len(maneos_a_cobrar)} productos ({total_unidades} uds) por un total de ${total_a_cobrar:,.0f} [{metodo_desc}].', 'success')
+
+        if imprimir_ticket:
+            return redirect(url_for('sales_bp.imprimir_ticket', sale_id=nueva_venta.id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al procesar el cobro de seleccionados: {str(e)}', 'danger')
+
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
 @clientes_bp.route('/<int:id>/cobro_total', methods=['POST'])
 @login_required
 def cobro_total(id):
@@ -250,19 +369,23 @@ def cobro_total(id):
         flash(f'"{cliente.nombre_o_razon_social}" no tiene maneos activos pendientes por cobrar.', 'info')
         return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
 
-    metodo_pago = request.form.get('metodo_pago', 'efectivo')
+    total_a_cobrar = sum(m.subtotal_calculado for m in maneos_activos)
+    total_unidades = sum(m.cantidad for m in maneos_activos)
+    tipo_pago = request.form.get('tipo_pago', 'unico')
     imprimir_ticket = bool(request.form.get('imprimir_ticket'))
     hora_actual = obtener_hora_bogota()
 
-    try:
-        total_a_cobrar = sum(m.subtotal_calculado for m in maneos_activos)
-        total_unidades = sum(m.cantidad for m in maneos_activos)
+    metodo_principal, pagos_list, error_msg = _procesar_pagos_venta(tipo_pago, total_a_cobrar, request.form)
+    if error_msg:
+        flash(error_msg, 'danger')
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
 
+    try:
         # Crear una única venta consolidada para liquidar todos los maneos activos
         nueva_venta = Sale(
             vendedor_id=current_user.id,
             monto_total=total_a_cobrar,
-            metodo_pago=metodo_pago,
+            metodo_pago=metodo_principal,
             fecha_venta=hora_actual
         )
         db.session.add(nueva_venta)
@@ -282,15 +405,17 @@ def cobro_total(id):
             m.estado = 'FACTURADO'
             m.fecha_resolucion = hora_actual
 
-        pago = SalePayment(
-            sale_id=nueva_venta.id,
-            metodo_pago=metodo_pago,
-            monto=total_a_cobrar
-        )
-        db.session.add(pago)
+        for p in pagos_list:
+            pago_obj = SalePayment(
+                sale_id=nueva_venta.id,
+                metodo_pago=p['metodo'],
+                monto=p['monto']
+            )
+            db.session.add(pago_obj)
 
         db.session.commit()
-        flash(f'¡Cobro total exitoso! Se liquidaron {len(maneos_activos)} productos ({total_unidades} uds) por un total de ${total_a_cobrar:,.0f} a través de {metodo_pago.capitalize()}.', 'success')
+        metodo_desc = "Pago Dividido (" + " + ".join([f"{p['metodo'].capitalize()} ${p['monto']:,.0f}" for p in pagos_list]) + ")" if len(pagos_list) > 1 else pagos_list[0]['metodo'].capitalize()
+        flash(f'¡Cobro total exitoso! Se liquidaron {len(maneos_activos)} productos ({total_unidades} uds) por un total de ${total_a_cobrar:,.0f} [{metodo_desc}].', 'success')
 
         if imprimir_ticket:
             return redirect(url_for('sales_bp.imprimir_ticket', sale_id=nueva_venta.id))

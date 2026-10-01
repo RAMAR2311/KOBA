@@ -135,11 +135,17 @@
                 </button>
             </li>
         </ul>
-        {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
-            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
-                <i class="fa-solid fa-cash-register me-1"></i> Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})
-            </button>
-        {% endif %}
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+                <!-- Botón dinámico para Cobro de Seleccionados (se activa al marcar productos) -->
+                <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold shadow-sm d-none animate__animated animate__fadeIn" id="btnCobrarSeleccionadosHeader" data-bs-toggle="modal" data-bs-target="#modalCobroSeleccionados">
+                    <i class="fa-solid fa-cash-register me-1"></i> Cobrar Seleccionados (<span id="txtBadgeSelCount">0</span> · <span id="txtBadgeSelTotal">$0</span>)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                    <i class="fa-solid fa-check-double me-1"></i> Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})
+                </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="tab-content" id="estadoCuentaTabsContent">
@@ -149,19 +155,33 @@
                 <table class="table table-hover table-custom mb-0 align-middle">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4" width="130">FECHA</th>
+                            <th class="ps-3 text-center" width="45">
+                                <input type="checkbox" class="form-check-input" id="selectAllManeos" title="Seleccionar todos los productos" style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
+                            </th>
+                            <th width="125">FECHA</th>
                             <th>PRODUCTO PRESTADO</th>
-                            <th class="text-center" width="160">OBSERVACIÓN</th>
-                            <th class="text-center" width="90">CANT</th>
-                            <th class="text-end" width="130">VALOR UND</th>
-                            <th class="text-end" width="140">SUBTOTAL</th>
-                            <th class="text-center pe-4" width="220">ACCIONES</th>
+                            <th class="text-center" width="150">OBSERVACIÓN</th>
+                            <th class="text-center" width="85">CANT</th>
+                            <th class="text-end" width="125">VALOR UND</th>
+                            <th class="text-end" width="135">SUBTOTAL</th>
+                            <th class="text-center pe-4" width="210">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for m in maneos_activos %}
-                        <tr>
-                            <td class="ps-4 small text-muted">
+                        <tr id="fila-maneo-{{ m.id }}" class="maneo-row-item">
+                            <td class="ps-3 text-center">
+                                <input type="checkbox" class="form-check-input maneo-chk" value="{{ m.id }}" 
+                                    data-id="{{ m.id }}" 
+                                    data-nombre="{{ m.producto.nombre|e }}" 
+                                    data-variante="{{ m.variante.nombre_variante|e if m.variante else '' }}" 
+                                    data-sku="{{ m.producto.sku|e }}" 
+                                    data-cant="{{ m.cantidad }}" 
+                                    data-pu="{{ m.valor_unitario_calculado }}" 
+                                    data-subtotal="{{ m.subtotal_calculado }}" 
+                                    style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
+                            </td>
+                            <td class="small text-muted">
                                 <div class="fw-bold text-brand-black">{{ m.fecha_prestamo.strftime('%d/%m/%Y') }}</div>
                                 <div style="font-size:0.75rem;">{{ m.fecha_prestamo.strftime('%H:%M') }}</div>
                             </td>
@@ -199,8 +219,8 @@
                             </td>
                             <td class="text-center pe-4">
                                 <div class="d-flex justify-content-center gap-2">
-                                    <!-- Botón Facturar / Cobrar -->
-                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFacturar{{ m.id }}" title="Cobrar / Facturar este producto">
+                                    <!-- Botón Facturar / Cobrar Individual -->
+                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFacturar{{ m.id }}" title="Cobrar este producto">
                                         <i class="fa-solid fa-cash-register me-1"></i> Cobrar
                                     </button>
 
@@ -213,7 +233,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-circle-check fs-1 text-success mb-2 opacity-50"></i>
                                 <p class="mb-0 fw-semibold text-brand-black">Este local no tiene maneos pendientes por resolver.</p>
                                 <small class="text-muted">Todo lo entregado ha sido liquidado o devuelto.</small>
@@ -522,6 +542,182 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
 {% endfor %}
 
+<!-- Barra Flotante Inferior de Selección Múltiple -->
+<div id="floatingSelectionBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 p-3 bg-dark text-white rounded-pill shadow-lg d-none align-items-center gap-3 z-3" style="max-width: 95%; width: auto; border: 2px solid rgba(255,255,255,0.25); backdrop-filter: blur(10px); z-index: 1060;">
+    <div class="d-flex align-items-center gap-2 ps-2">
+        <span class="badge bg-success rounded-pill px-2 py-1 fs-6 fw-bold" id="floatingCountBadge">0</span>
+        <span class="small fw-semibold d-none d-sm-inline">Productos Seleccionados:</span>
+        <span class="fs-5 fw-bold text-success" id="floatingTotalText">$0</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" id="btnDesmarcarTodos">
+            <i class="fa-solid fa-xmark me-1"></i> Desmarcar
+        </button>
+        <button type="button" class="btn btn-sm btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroSeleccionados">
+            <i class="fa-solid fa-cash-register me-1"></i> Cobrar (<span id="floatingBtnTotalText">$0</span>)
+        </button>
+    </div>
+</div>
+
+<!-- Modal Cobro de Productos Seleccionados -->
+<div class="modal fade" id="modalCobroSeleccionados" tabindex="-1" aria-labelledby="modalCobroSeleccionadosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-success bg-opacity-10 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px;">
+                        <i class="fa-solid fa-cash-register fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalCobroSeleccionadosLabel">
+                            Cobro de Productos Seleccionados
+                        </h5>
+                        <small class="text-muted">Liquidación múltiple para <strong>{{ cliente.nombre_o_razon_social }}</strong></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="POST" id="formCobroSeleccionados" action="{{ url_for('clientes_bp.cobro_seleccionados', id=cliente.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="maneo_ids_csv" id="inputManeoIdsCsv" value="">
+                <input type="hidden" name="tipo_pago" id="inputTipoPagoSel" value="unico">
+                <div id="hiddenManeoIdsContainer"></div>
+
+                <div class="modal-body p-4">
+                    <!-- Resumen de seleccionados -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded-3 border">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Productos a Cobrar</span>
+                            <span class="fs-6 fw-semibold text-brand-black" id="txtModalSelResumen">0 productos seleccionados</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Total a Recibir</span>
+                            <span class="fs-3 fw-bold text-success" id="txtModalSelTotal">$0</span>
+                        </div>
+                    </div>
+
+                    <!-- Detalle de productos seleccionados -->
+                    <label class="form-label fw-bold text-brand-black small text-uppercase mb-1">
+                        <i class="fa-solid fa-list-check me-1 text-primary"></i> Detalle de Ítems a Liquidar:
+                    </label>
+                    <div class="table-responsive border rounded-3 mb-3" style="max-height: 190px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th class="ps-3 py-2 text-muted small fw-bold">PRODUCTO</th>
+                                    <th class="text-center py-2 text-muted small fw-bold">CANT</th>
+                                    <th class="text-end py-2 text-muted small fw-bold">PRECIO UND</th>
+                                    <th class="text-end pe-3 py-2 text-muted small fw-bold">SUBTOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyModalSelItems">
+                                <!-- Inyectado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Selector Tipo de Pago: Único vs Dividido -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black d-block mb-2">Forma de Pago <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group">
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoSel" id="radioPagoUnicoSel" autocomplete="off" checked>
+                            <label class="btn btn-outline-success border-0 rounded-2 fw-bold py-2" for="radioPagoUnicoSel">
+                                <i class="fa-solid fa-wallet me-1"></i> Pago Único (1 Método)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoSel" id="radioPagoDivididoSel" autocomplete="off">
+                            <label class="btn btn-outline-success border-0 rounded-2 fw-bold py-2" for="radioPagoDivididoSel">
+                                <i class="fa-solid fa-layer-group me-1"></i> Pago Dividido (2 Métodos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor PAGO ÚNICO -->
+                    <div id="containerPagoUnicoSel" class="mb-3">
+                        <label class="form-label fw-bold text-brand-black small text-uppercase">Método de Pago Recibido</label>
+                        <select name="metodo_pago" id="selectMetodoPagoUnicoSel" class="form-select bg-light border shadow-sm py-2">
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Nequi</option>
+                            <option value="daviplata">📱 Daviplata</option>
+                            <option value="bancolombia">🏦 Bancolombia</option>
+                            <option value="tarjeta">💳 Tarjeta / Datáfono</option>
+                            <option value="transferencia">🔄 Transferencia Bancaria</option>
+                        </select>
+                    </div>
+
+                    <!-- Contenedor PAGO DIVIDIDO -->
+                    <div id="containerPagoDivididoSel" class="mb-3 d-none p-3 rounded-3 border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-brand-black small text-uppercase"><i class="fa-solid fa-code-branch me-1 text-primary"></i> Desglose de 2 Métodos de Pago:</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-0" style="font-size: 0.75rem;" id="btnDividir5050Sel">
+                                <i class="fa-solid fa-scale-balanced me-1"></i> 50% / 50%
+                            </button>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <!-- Método 1 -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm">
+                                    <label class="form-label small fw-bold text-muted mb-1">Primer Método</label>
+                                    <select name="metodo_pago_1" id="selectMetodo1Sel" class="form-select form-select-sm mb-2">
+                                        <option value="efectivo" selected>💵 Efectivo</option>
+                                        <option value="nequi">📱 Nequi</option>
+                                        <option value="daviplata">📱 Daviplata</option>
+                                        <option value="bancolombia">🏦 Bancolombia</option>
+                                        <option value="tarjeta">💳 Tarjeta</option>
+                                        <option value="transferencia">🔄 Transferencia</option>
+                                    </select>
+                                    <label class="form-label small fw-bold text-brand-black mb-1">Monto Método 1 ($)</label>
+                                    <input type="number" step="any" name="monto_1" id="inputMonto1Sel" class="form-control fw-bold text-success fs-6" placeholder="0" min="0">
+                                </div>
+                            </div>
+
+                            <!-- Método 2 -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm">
+                                    <label class="form-label small fw-bold text-muted mb-1">Segundo Método</label>
+                                    <select name="metodo_pago_2" id="selectMetodo2Sel" class="form-select form-select-sm mb-2">
+                                        <option value="nequi" selected>📱 Nequi</option>
+                                        <option value="efectivo">💵 Efectivo</option>
+                                        <option value="daviplata">📱 Daviplata</option>
+                                        <option value="bancolombia">🏦 Bancolombia</option>
+                                        <option value="tarjeta">💳 Tarjeta</option>
+                                        <option value="transferencia">🔄 Transferencia</option>
+                                    </select>
+                                    <label class="form-label small fw-bold text-brand-black mb-1">Monto Método 2 ($)</label>
+                                    <input type="number" step="any" name="monto_2" id="inputMonto2Sel" class="form-control fw-bold text-primary fs-6" placeholder="0" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monitor de Balance en Vivo -->
+                        <div id="alertBalanceSel" class="alert alert-success py-2 px-3 rounded-3 mb-0 d-flex justify-content-between align-items-center small">
+                            <span id="txtBalanceStatusSel"><i class="fa-solid fa-circle-check text-success me-1"></i> Montos cuadrados correctamente</span>
+                            <span class="fw-bold" id="txtBalanceDiffSel">$0</span>
+                        </div>
+                    </div>
+
+                    <!-- Opción imprimir ticket -->
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="imprimir_ticket" id="checkImprimirTicketSel">
+                        <label class="form-check-label fw-semibold text-brand-black small" for="checkImprimirTicketSel">
+                            Generar / Ver ticket térmico de venta tras completar el cobro
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnSubmitCobroSel" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Cobro (<span id="txtBtnConfirmarTotalSel">$0</span>)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
 <!-- Modal de Cobro Total de Todos los Maneos Activos -->
 <div class="modal fade" id="modalCobroTotal" tabindex="-1" aria-labelledby="modalCobroTotalLabel" aria-hidden="true">
@@ -542,8 +738,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
 
-            <form method="POST" action="{{ url_for('clientes_bp.cobro_total', id=cliente.id) }}">
+            <form method="POST" id="formCobroTotal" action="{{ url_for('clientes_bp.cobro_total', id=cliente.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="tipo_pago" id="inputTipoPagoTotal" value="unico">
 
                 <div class="modal-body p-4">
                     <!-- Resumen del Cobro Total -->
@@ -562,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label class="form-label fw-bold text-brand-black small text-uppercase mb-1">
                         <i class="fa-solid fa-list-check me-1 text-primary"></i> Detalle de Productos a Cobrar:
                     </label>
-                    <div class="table-responsive border rounded-3 mb-3" style="max-height: 220px; overflow-y: auto;">
+                    <div class="table-responsive border rounded-3 mb-3" style="max-height: 190px; overflow-y: auto;">
                         <table class="table table-sm table-hover mb-0 align-middle">
                             <thead class="bg-light sticky-top">
                                 <tr>
@@ -591,10 +788,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         </table>
                     </div>
 
-                    <!-- Medio de pago -->
+                    <!-- Selector Tipo de Pago: Único vs Dividido -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-brand-black">Medio de Pago a Recibir <span class="text-danger">*</span></label>
-                        <select name="metodo_pago" class="form-select bg-light border-0 shadow-sm py-2" required>
+                        <label class="form-label fw-bold text-brand-black d-block mb-2">Forma de Pago <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group">
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoTotal" id="radioPagoUnicoTotal" autocomplete="off" checked>
+                            <label class="btn btn-outline-success border-0 rounded-2 fw-bold py-2" for="radioPagoUnicoTotal">
+                                <i class="fa-solid fa-wallet me-1"></i> Pago Único (1 Método)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoTotal" id="radioPagoDivididoTotal" autocomplete="off">
+                            <label class="btn btn-outline-success border-0 rounded-2 fw-bold py-2" for="radioPagoDivididoTotal">
+                                <i class="fa-solid fa-layer-group me-1"></i> Pago Dividido (2 Métodos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor PAGO ÚNICO -->
+                    <div id="containerPagoUnicoTotal" class="mb-3">
+                        <label class="form-label fw-bold text-brand-black small text-uppercase">Método de Pago Recibido</label>
+                        <select name="metodo_pago" id="selectMetodoPagoUnicoTotal" class="form-select bg-light border shadow-sm py-2">
                             <option value="efectivo">💵 Efectivo directo a Caja</option>
                             <option value="nequi">📱 Nequi</option>
                             <option value="bancolombia">🏦 Bancolombia</option>
@@ -602,6 +815,58 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="tarjeta">💳 Tarjeta / Datáfono</option>
                             <option value="transferencia">🔄 Transferencia Bancaria</option>
                         </select>
+                    </div>
+
+                    <!-- Contenedor PAGO DIVIDIDO -->
+                    <div id="containerPagoDivididoTotal" class="mb-3 d-none p-3 rounded-3 border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-brand-black small text-uppercase"><i class="fa-solid fa-code-branch me-1 text-primary"></i> Desglose de 2 Métodos de Pago:</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-0" style="font-size: 0.75rem;" id="btnDividir5050Total">
+                                <i class="fa-solid fa-scale-balanced me-1"></i> 50% / 50%
+                            </button>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <!-- Método 1 -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm">
+                                    <label class="form-label small fw-bold text-muted mb-1">Primer Método</label>
+                                    <select name="metodo_pago_1" id="selectMetodo1Total" class="form-select form-select-sm mb-2">
+                                        <option value="efectivo" selected>💵 Efectivo</option>
+                                        <option value="nequi">📱 Nequi</option>
+                                        <option value="daviplata">📱 Daviplata</option>
+                                        <option value="bancolombia">🏦 Bancolombia</option>
+                                        <option value="tarjeta">💳 Tarjeta</option>
+                                        <option value="transferencia">🔄 Transferencia</option>
+                                    </select>
+                                    <label class="form-label small fw-bold text-brand-black mb-1">Monto Método 1 ($)</label>
+                                    <input type="number" step="any" name="monto_1" id="inputMonto1Total" class="form-control fw-bold text-success fs-6" placeholder="0" min="0">
+                                </div>
+                            </div>
+
+                            <!-- Método 2 -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm">
+                                    <label class="form-label small fw-bold text-muted mb-1">Segundo Método</label>
+                                    <select name="metodo_pago_2" id="selectMetodo2Total" class="form-select form-select-sm mb-2">
+                                        <option value="nequi" selected>📱 Nequi</option>
+                                        <option value="efectivo">💵 Efectivo</option>
+                                        <option value="daviplata">📱 Daviplata</option>
+                                        <option value="bancolombia">🏦 Bancolombia</option>
+                                        <option value="tarjeta">💳 Tarjeta</option>
+                                        <option value="transferencia">🔄 Transferencia</option>
+                                    </select>
+                                    <label class="form-label small fw-bold text-brand-black mb-1">Monto Método 2 ($)</label>
+                                    <input type="number" step="any" name="monto_2" id="inputMonto2Total" class="form-control fw-bold text-primary fs-6" placeholder="0" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monitor de Balance en Vivo -->
+                        <div id="alertBalanceTotal" class="alert alert-success py-2 px-3 rounded-3 mb-0 d-flex justify-content-between align-items-center small">
+                            <span id="txtBalanceStatusTotal"><i class="fa-solid fa-circle-check text-success me-1"></i> Montos cuadrados correctamente</span>
+                            <span class="fw-bold" id="txtBalanceDiffTotal">$0</span>
+                        </div>
                     </div>
 
                     <!-- Opción imprimir ticket -->
@@ -615,7 +880,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                    <button type="submit" id="btnSubmitCobroTotal" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
                         <i class="fa-solid fa-check me-1"></i> Confirmar Cobro Total de ${{ '{:,.0f}'.format(saldo_pendiente) }}
                     </button>
                 </div>
@@ -625,9 +890,312 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 {% endif %}
 
+<!-- Script de Interactividad y Lógica Reactiva -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalSaldoCliente = {{ saldo_pendiente }};
+    const selectAllCheckbox = document.getElementById('selectAllManeos');
+    const maneoCheckboxes = document.querySelectorAll('.maneo-chk');
+    const btnHeaderSel = document.getElementById('btnCobrarSeleccionadosHeader');
+    const badgeSelCount = document.getElementById('txtBadgeSelCount');
+    const badgeSelTotal = document.getElementById('txtBadgeSelTotal');
+
+    const floatingBar = document.getElementById('floatingSelectionBar');
+    const floatingCount = document.getElementById('floatingCountBadge');
+    const floatingTotalText = document.getElementById('floatingTotalText');
+    const floatingBtnTotalText = document.getElementById('floatingBtnTotalText');
+    const btnDesmarcar = document.getElementById('btnDesmarcarTodos');
+
+    const modalCobroSel = document.getElementById('modalCobroSeleccionados');
+    const tbodyModalSel = document.getElementById('tbodyModalSelItems');
+    const txtModalSelResumen = document.getElementById('txtModalSelResumen');
+    const txtModalSelTotal = document.getElementById('txtModalSelTotal');
+    const txtBtnConfirmarTotalSel = document.getElementById('txtBtnConfirmarTotalSel');
+    const inputManeoIdsCsv = document.getElementById('inputManeoIdsCsv');
+    const hiddenManeoIdsContainer = document.getElementById('hiddenManeoIdsContainer');
+
+    function formatearDinero(num) {
+        return '$' + Math.round(num).toLocaleString('es-CO');
+    }
+
+    function actualizarSeleccion() {
+        const seleccionados = Array.from(maneoCheckboxes).filter(chk => chk.checked);
+        const count = seleccionados.length;
+        let total = 0;
+        let totalUnidades = 0;
+
+        maneoCheckboxes.forEach(chk => {
+            const row = chk.closest('tr');
+            if (row) {
+                if (chk.checked) {
+                    row.classList.add('table-success', 'bg-opacity-25');
+                } else {
+                    row.classList.remove('table-success', 'bg-opacity-25');
+                }
+            }
+        });
+
+        seleccionados.forEach(chk => {
+            total += parseFloat(chk.dataset.subtotal || 0);
+            totalUnidades += parseInt(chk.dataset.cant || 1);
+        });
+
+        const formattedTotal = formatearDinero(total);
+
+        // Actualizar botón de cabecera
+        if (btnHeaderSel) {
+            if (count > 0) {
+                btnHeaderSel.classList.remove('d-none');
+                badgeSelCount.textContent = count;
+                badgeSelTotal.textContent = formattedTotal;
+            } else {
+                btnHeaderSel.classList.add('d-none');
+            }
+        }
+
+        // Actualizar barra flotante
+        if (floatingBar) {
+            if (count > 0) {
+                floatingBar.classList.remove('d-none');
+                floatingBar.classList.add('d-flex');
+                floatingCount.textContent = count;
+                floatingTotalText.textContent = formattedTotal;
+                floatingBtnTotalText.textContent = formattedTotal;
+            } else {
+                floatingBar.classList.add('d-none');
+                floatingBar.classList.remove('d-flex');
+            }
+        }
+
+        // Sincronizar checkbox maestro
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (count === maneoCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const estado = this.checked;
+            maneoCheckboxes.forEach(chk => {
+                chk.checked = estado;
+            });
+            actualizarSeleccion();
+        });
+    }
+
+    maneoCheckboxes.forEach(chk => {
+        chk.addEventListener('change', actualizarSeleccion);
+    });
+
+    if (btnDesmarcar) {
+        btnDesmarcar.addEventListener('click', function() {
+            maneoCheckboxes.forEach(chk => { chk.checked = false; });
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            actualizarSeleccion();
+        });
+    }
+
+    // Preparar contenido del modal de seleccionados antes de abrirlo
+    if (modalCobroSel) {
+        modalCobroSel.addEventListener('show.bs.modal', function() {
+            const seleccionados = Array.from(maneoCheckboxes).filter(chk => chk.checked);
+            if (seleccionados.length === 0) return;
+
+            let total = 0;
+            let totalUds = 0;
+            const ids = [];
+            tbodyModalSel.innerHTML = '';
+            hiddenManeoIdsContainer.innerHTML = '';
+
+            seleccionados.forEach(chk => {
+                const id = chk.dataset.id;
+                const nombre = chk.dataset.nombre;
+                const variante = chk.dataset.variante;
+                const sku = chk.dataset.sku;
+                const cant = parseInt(chk.dataset.cant || 1);
+                const pu = parseFloat(chk.dataset.pu || 0);
+                const subtotal = parseFloat(chk.dataset.subtotal || 0);
+
+                total += subtotal;
+                totalUds += cant;
+                ids.push(id);
+
+                // Fila en tabla del modal
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-3 py-2">
+                        <div class="fw-bold text-brand-black small">${nombre}</div>
+                        ${variante ? `<small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>${variante}</small>` : ''}
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">SKU: ${sku}</small>
+                    </td>
+                    <td class="text-center py-2 fw-bold text-brand-black small">${cant}</td>
+                    <td class="text-end py-2 text-muted small">${formatearDinero(pu)}</td>
+                    <td class="text-end pe-3 py-2 fw-bold text-danger small">${formatearDinero(subtotal)}</td>
+                `;
+                tbodyModalSel.appendChild(tr);
+
+                // Hidden inputs
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'maneo_ids';
+                hiddenInput.value = id;
+                hiddenManeoIdsContainer.appendChild(hiddenInput);
+            });
+
+            inputManeoIdsCsv.value = ids.join(',');
+            const formattedTotal = formatearDinero(total);
+            txtModalSelResumen.textContent = `${seleccionados.length} productos seleccionados (${totalUds} unidades)`;
+            txtModalSelTotal.textContent = formattedTotal;
+            txtBtnConfirmarTotalSel.textContent = formattedTotal;
+
+            // Configurar montos en el calculador dividido de seleccionados
+            setupCalculadorDividido({
+                totalAmount: total,
+                radioUnicoId: 'radioPagoUnicoSel',
+                radioDivididoId: 'radioPagoDivididoSel',
+                containerUnicoId: 'containerPagoUnicoSel',
+                containerDivididoId: 'containerPagoDivididoSel',
+                inputTipoPagoId: 'inputTipoPagoSel',
+                inputMonto1Id: 'inputMonto1Sel',
+                inputMonto2Id: 'inputMonto2Sel',
+                btn5050Id: 'btnDividir5050Sel',
+                alertBalanceId: 'alertBalanceSel',
+                txtStatusId: 'txtBalanceStatusSel',
+                txtDiffId: 'txtBalanceDiffSel',
+                btnSubmitId: 'btnSubmitCobroSel'
+            });
+        });
+    }
+
+    // Configurar calculador de Cobro Total si existe
+    const modalCobroTotalEl = document.getElementById('modalCobroTotal');
+    if (modalCobroTotalEl) {
+        modalCobroTotalEl.addEventListener('show.bs.modal', function() {
+            setupCalculadorDividido({
+                totalAmount: totalSaldoCliente,
+                radioUnicoId: 'radioPagoUnicoTotal',
+                radioDivididoId: 'radioPagoDivididoTotal',
+                containerUnicoId: 'containerPagoUnicoTotal',
+                containerDivididoId: 'containerPagoDivididoTotal',
+                inputTipoPagoId: 'inputTipoPagoTotal',
+                inputMonto1Id: 'inputMonto1Total',
+                inputMonto2Id: 'inputMonto2Total',
+                btn5050Id: 'btnDividir5050Total',
+                alertBalanceId: 'alertBalanceTotal',
+                txtStatusId: 'txtBalanceStatusTotal',
+                txtDiffId: 'txtBalanceDiffTotal',
+                btnSubmitId: 'btnSubmitCobroTotal'
+            });
+        });
+    }
+
+    // Función genérica reutilizable para orquestar Pagos Divididos y Únicos
+    function setupCalculadorDividido(config) {
+        const radioUnico = document.getElementById(config.radioUnicoId);
+        const radioDividido = document.getElementById(config.radioDivididoId);
+        const containerUnico = document.getElementById(config.containerUnicoId);
+        const containerDividido = document.getElementById(config.containerDivididoId);
+        const inputTipoPago = document.getElementById(config.inputTipoPagoId);
+        const inputMonto1 = document.getElementById(config.inputMonto1Id);
+        const inputMonto2 = document.getElementById(config.inputMonto2Id);
+        const btn5050 = document.getElementById(config.btn5050Id);
+        const alertBalance = document.getElementById(config.alertBalanceId);
+        const txtStatus = document.getElementById(config.txtStatusId);
+        const txtDiff = document.getElementById(config.txtDiffId);
+        const btnSubmit = document.getElementById(config.btnSubmitId);
+
+        if (!radioUnico || !radioDividido) return;
+
+        function validarBalance() {
+            if (radioUnico.checked) {
+                inputTipoPago.value = 'unico';
+                if (btnSubmit) btnSubmit.disabled = false;
+                return;
+            }
+
+            inputTipoPago.value = 'dividido';
+            const m1 = parseFloat(inputMonto1.value) || 0;
+            const m2 = parseFloat(inputMonto2.value) || 0;
+            const suma = m1 + m2;
+            const diff = config.totalAmount - suma;
+
+            if (Math.abs(diff) < 1 && m1 > 0 && m2 > 0) {
+                alertBalance.className = 'alert alert-success py-2 px-3 rounded-3 mb-0 d-flex justify-content-between align-items-center small';
+                txtStatus.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Montos cuadrados exactamente al 100%';
+                txtDiff.textContent = '$0 restante';
+                if (btnSubmit) btnSubmit.disabled = false;
+            } else if (diff > 0) {
+                alertBalance.className = 'alert alert-warning py-2 px-3 rounded-3 mb-0 d-flex justify-content-between align-items-center small';
+                txtStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> Falta asignar <strong>${formatearDinero(diff)}</strong>`;
+                txtDiff.textContent = `Faltan ${formatearDinero(diff)}`;
+                if (btnSubmit) btnSubmit.disabled = (m1 <= 0 || m2 <= 0 || Math.abs(diff) >= 1);
+            } else {
+                const excede = Math.abs(diff);
+                alertBalance.className = 'alert alert-danger py-2 px-3 rounded-3 mb-0 d-flex justify-content-between align-items-center small';
+                txtStatus.innerHTML = `<i class="fa-solid fa-circle-xmark text-danger me-1"></i> La suma excede el total por <strong>${formatearDinero(excede)}</strong>`;
+                txtDiff.textContent = `Excede +${formatearDinero(excede)}`;
+                if (btnSubmit) btnSubmit.disabled = true;
+            }
+        }
+
+        radioUnico.addEventListener('change', function() {
+            if (this.checked) {
+                containerUnico.classList.remove('d-none');
+                containerDividido.classList.add('d-none');
+                validarBalance();
+            }
+        });
+
+        radioDividido.addEventListener('change', function() {
+            if (this.checked) {
+                containerUnico.classList.add('d-none');
+                containerDividido.classList.remove('d-none');
+                // Si están vacíos, calcular 50% y 50%
+                if (!parseFloat(inputMonto1.value) && !parseFloat(inputMonto2.value)) {
+                    const mitad = Math.floor(config.totalAmount / 2);
+                    inputMonto1.value = mitad;
+                    inputMonto2.value = config.totalAmount - mitad;
+                }
+                validarBalance();
+            }
+        });
+
+        if (btn5050) {
+            btn5050.addEventListener('click', function() {
+                const mitad = Math.floor(config.totalAmount / 2);
+                inputMonto1.value = mitad;
+                inputMonto2.value = config.totalAmount - mitad;
+                validarBalance();
+            });
+        }
+
+        inputMonto1.addEventListener('input', function() {
+            const m1 = parseFloat(this.value) || 0;
+            const restante = Math.max(0, config.totalAmount - m1);
+            inputMonto2.value = restante;
+            validarBalance();
+        });
+
+        inputMonto2.addEventListener('input', validarBalance);
+    }
+});
+</script>
+
 <style>
+.table-custom tr.table-success td {
+    background-color: #d1fae5 !important;
+}
 @media print {
-    .btn, nav, .card-header, #estadoCuentaTabs {
+    .btn, nav, .card-header, #estadoCuentaTabs, #floatingSelectionBar {
         display: none !important;
     }
     .card {
