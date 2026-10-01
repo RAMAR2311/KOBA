@@ -76,22 +76,24 @@ def create_app():
     # Detección inteligente de Base de Datos (PostgreSQL con Fallback automático a SQLite local)
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
+        instance_path = os.path.join(app.root_path, 'instance')
+        os.makedirs(instance_path, exist_ok=True)
+        sqlite_url = f"sqlite:///{os.path.join(instance_path, 'crm_inventory.db')}"
+        
         try:
-            import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex(('127.0.0.1', 5432))
-            sock.close()
-            if result == 0:
-                db_url = 'postgresql://postgres:admin123@localhost:5432/KOBA'
-            else:
-                instance_path = os.path.join(app.root_path, 'instance')
-                os.makedirs(instance_path, exist_ok=True)
-                db_url = f"sqlite:///{os.path.join(instance_path, 'crm_inventory.db')}"
+            import psycopg2
+            conn = psycopg2.connect(
+                dbname="KOBA",
+                user="postgres",
+                password="admin123",
+                host="127.0.0.1",
+                port="5432",
+                connect_timeout=1
+            )
+            conn.close()
+            db_url = 'postgresql://postgres:admin123@localhost:5432/KOBA'
         except Exception:
-            instance_path = os.path.join(app.root_path, 'instance')
-            os.makedirs(instance_path, exist_ok=True)
-            db_url = f"sqlite:///{os.path.join(instance_path, 'crm_inventory.db')}"
+            db_url = sqlite_url
 
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
