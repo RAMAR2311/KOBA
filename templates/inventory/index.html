@@ -35,7 +35,7 @@
     }
 
     .inv-table-header {
-        border-top: 2px solid #eab308;
+        border-top: 2px solid var(--brand-primary);
     }
 </style>
 
@@ -215,7 +215,7 @@
                             <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">{{ p.total_stock }} unidades</span>
                         {% endif %}
                     </td>
-                    <td class="text-end fw-bold" style="color: #d97706;">
+                    <td class="text-end fw-bold" style="color: var(--brand-primary);">
                         {% if p.rango_costos %}
                             {% if p.rango_costos is number %}
                                 ${{ (p.rango_costos)|cop }}
