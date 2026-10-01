@@ -3,54 +3,74 @@
 {% block content %}
 <!-- Cabecera del Cliente / Estado de Cuenta -->
 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-4">
-    <div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <h2 class="fw-bold text-brand-black m-0">{{ cliente.nombre_o_razon_social }}</h2>
-            {% if cliente.local_numero %}
-                <span class="badge bg-light text-dark border px-3 py-1 fs-6"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ cliente.local_numero }}</span>
-            {% endif %}
-            {% if saldo_pendiente > 0 %}
-                <span class="badge bg-danger rounded-pill px-3 py-1 fs-6"><i class="fa-solid fa-triangle-exclamation me-1"></i>Deuda Activa</span>
-            {% else %}
-                <span class="badge bg-success rounded-pill px-3 py-1 fs-6"><i class="fa-solid fa-circle-check me-1"></i>Cuenta al Día</span>
-            {% endif %}
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-4 d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-sm" style="width: 54px; height: 54px; background: linear-gradient(135deg, var(--brand-primary) 0%, #006666 100%);">
+            <i class="fa-solid fa-store fs-4"></i>
         </div>
-        <p class="text-muted small m-0 mt-1">
-            {% if cliente.contacto_persona %}<span class="me-2"><i class="fa-solid fa-user text-muted me-1"></i>Contacto: <strong>{{ cliente.contacto_persona }}</strong></span>{% endif %}
-            {% if cliente.telefono %}
-                <span class="me-2"><i class="fa-solid fa-phone text-muted me-1"></i>Tel: <strong>{{ cliente.telefono }}</strong></span>
-            {% endif %}
-            <span class="text-muted">· Registrado el {{ cliente.fecha_registro.strftime('%d/%m/%Y') }}</span>
-        </p>
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h2 class="fw-bold text-brand-black m-0" style="font-family: 'Outfit', sans-serif;">{{ cliente.nombre_o_razon_social }}</h2>
+                {% if cliente.local_numero %}
+                    <span class="badge bg-light text-dark border px-3 py-1 fs-6"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ cliente.local_numero }}</span>
+                {% endif %}
+                {% if saldo_pendiente > 0 %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-3 py-1 fs-6 fw-bold">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Deuda Activa
+                    </span>
+                {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1 fs-6 fw-bold">
+                        <i class="fa-solid fa-circle-check me-1"></i>Cuenta al Día
+                    </span>
+                {% endif %}
+            </div>
+            <p class="text-muted small m-0 mt-1 d-flex align-items-center gap-2 flex-wrap">
+                {% if cliente.contacto_persona %}
+                    <span><i class="fa-solid fa-user text-muted me-1"></i>Contacto: <strong>{{ cliente.contacto_persona }}</strong></span>
+                    <span class="text-muted">·</span>
+                {% endif %}
+                {% if cliente.telefono %}
+                    <span><i class="fa-solid fa-phone text-muted me-1"></i>Tel: <strong>{{ cliente.telefono }}</strong></span>
+                    <span class="text-muted">·</span>
+                {% endif %}
+                <span class="text-muted"><i class="fa-regular fa-calendar text-muted me-1"></i>Registrado el {{ cliente.fecha_registro.strftime('%d/%m/%Y') }}</span>
+            </p>
+        </div>
     </div>
 
     <!-- Botones de Acción Superior -->
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3 fw-bold">
-            <i class="fa-solid fa-arrow-left me-1"></i> Directorio
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Directorio</span>
         </a>
-        <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold" id="btnCompartirWhatsApp">
-            <i class="fa-brands fa-whatsapp me-1 fs-5 align-middle"></i> Enviar Estado
+        <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" id="btnCompartirWhatsApp">
+            <i class="fa-brands fa-whatsapp fs-5"></i>
+            <span>Enviar Estado</span>
         </button>
-        <button type="button" class="btn btn-outline-dark rounded-pill px-3 fw-bold" onclick="window.print()">
-            <i class="fa-solid fa-print me-1"></i> Imprimir
+        <button type="button" class="btn btn-outline-dark rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" onclick="window.print()">
+            <i class="fa-solid fa-print"></i>
+            <span>Imprimir</span>
         </button>
         {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
-            <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
-                <i class="fa-solid fa-cash-register me-1"></i> Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})
+            <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                <i class="fa-solid fa-cash-register"></i>
+                <span>Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})</span>
             </button>
         {% endif %}
-        <a href="{{ url_for('admin_bp.maneos', cliente_id=cliente.id) }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm text-white">
-            <i class="fa-solid fa-handshake me-1"></i> Prestar Maneo
+        <a href="{{ url_for('admin_bp.maneos', cliente_id=cliente.id) }}" class="btn btn-blue rounded-pill px-4 fw-bold shadow text-white d-flex align-items-center gap-1">
+            <i class="fa-solid fa-handshake"></i>
+            <span>Prestar Maneo</span>
         </a>
     </div>
 </div>
 
 {% if cliente.notas %}
-<div class="alert alert-light border shadow-sm mb-4 rounded-3 d-flex align-items-center">
-    <i class="fa-solid fa-clipboard-check fs-4 text-brand-blue me-3"></i>
+<div class="alert alert-light border shadow-sm mb-4 rounded-4 p-3 d-flex align-items-center" style="border-left: 4px solid var(--brand-primary) !important; background-color: #ffffff;">
+    <div class="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 40px; height: 40px; background-color: var(--brand-primary-light); color: var(--brand-primary);">
+        <i class="fa-solid fa-clipboard-check fs-5"></i>
+    </div>
     <div>
-        <strong class="d-block text-brand-black">Notas / Acuerdos Comerciales:</strong>
+        <strong class="d-block text-brand-black" style="font-size: 0.88rem;">Notas / Acuerdos Comerciales:</strong>
         <span class="text-muted small">{{ cliente.notas }}</span>
     </div>
 </div>
@@ -60,22 +80,27 @@
 <div class="row g-3 mb-4">
     <!-- Saldo Pendiente Actual -->
     <div class="col-md-6 col-lg-3">
-        <div class="card card-custom p-3 border-0 shadow-sm {% if saldo_pendiente > 0 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-white{% endif %} h-100 d-flex flex-column justify-content-between">
+        <div class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between kpi-koba-card" style="border-top: 4px solid {% if saldo_pendiente > 0 %}#ef4444{% else %}#10b981{% endif %} !important; background-color: #ffffff;">
             <div>
-                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Saldo Pendiente por Cobrar</span>
-                <h3 class="fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %} my-1">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Saldo Pendiente</span>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: {% if saldo_pendiente > 0 %}#fee2e2; color: #dc2626;{% else %}#d1fae5; color: #059669;{% endif %}">
+                        <i class="fa-solid {% if saldo_pendiente > 0 %}fa-hand-holding-dollar{% else %}fa-circle-check{% endif %}"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %} my-1" style="font-family: 'Outfit', sans-serif;">
                     ${{ '{:,.0f}'.format(saldo_pendiente) }}
                 </h3>
                 <small class="text-muted">
                     {% if saldo_pendiente > 0 %}
-                        <i class="fa-solid fa-clock me-1 text-danger"></i>Cobro pendiente
+                        <i class="fa-solid fa-clock me-1 text-danger"></i>Cobro pendiente de liquidar
                     {% else %}
                         <i class="fa-solid fa-check me-1 text-success"></i>Sin dinero adeudado
                     {% endif %}
                 </small>
             </div>
             {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
-                <div class="mt-2 pt-2 border-top">
+                <div class="mt-3 pt-2 border-top">
                     <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
                         <i class="fa-solid fa-cash-register me-1"></i> Cobrar Todo (${{ '{:,.0f}'.format(saldo_pendiente) }})
                     </button>
@@ -86,9 +111,14 @@
 
     <!-- Unidades Físicas en su Poder -->
     <div class="col-md-6 col-lg-3">
-        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
-            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Mercancía en su Poder</span>
-            <h3 class="fw-bold text-brand-black my-1">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100 kpi-koba-card" style="border-top: 4px solid var(--brand-primary) !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Mercancía Prestada</span>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: var(--brand-primary-light); color: var(--brand-primary);">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-brand-black my-1" style="font-family: 'Outfit', sans-serif;">
                 {{ unidades_pendientes }} <span class="fs-6 text-muted fw-normal">unidades</span>
             </h3>
             <small class="text-muted">{{ maneos_activos|length }} registros activos de maneo</small>
@@ -97,9 +127,14 @@
 
     <!-- Total Cobrado / Facturado -->
     <div class="col-md-6 col-lg-3">
-        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
-            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Total Cobrado (Histórico)</span>
-            <h3 class="fw-bold text-success my-1">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100 kpi-koba-card" style="border-top: 4px solid #10b981 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Cobrado</span>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: #d1fae5; color: #059669;">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-success my-1" style="font-family: 'Outfit', sans-serif;">
                 ${{ '{:,.0f}'.format(total_cobrado) }}
             </h3>
             <small class="text-muted">Liquidado a través de caja</small>
@@ -108,9 +143,14 @@
 
     <!-- Total Devuelto -->
     <div class="col-md-6 col-lg-3">
-        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100">
-            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Total Devuelto en Producto</span>
-            <h3 class="fw-bold text-secondary my-1">
+        <div class="card card-custom p-3 bg-white border-0 shadow-sm h-100 kpi-koba-card" style="border-top: 4px solid #64748b !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Devuelto</span>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: #f1f5f9; color: #475569;">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-secondary my-1" style="font-family: 'Outfit', sans-serif;">
                 ${{ '{:,.0f}'.format(total_devuelto) }}
             </h3>
             <small class="text-muted">Reingresado a inventario físico</small>
@@ -123,15 +163,15 @@
     <div class="card-header bg-light border-0 p-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
         <ul class="nav nav-pills gap-2" id="estadoCuentaTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-4 fw-bold" id="activos-tab" data-bs-toggle="tab" data-bs-target="#tab-activos" type="button" role="tab">
+                <button class="nav-link active rounded-pill px-4 fw-bold tab-koba-pill" id="activos-tab" data-bs-toggle="tab" data-bs-target="#tab-activos" type="button" role="tab">
                     <i class="fa-solid fa-clock-rotate-left me-1"></i> Maneos Activos Pendientes 
-                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ maneos_activos|length }}</span>
+                    <span class="badge bg-warning text-dark rounded-pill ms-1 fw-bold">{{ maneos_activos|length }}</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-4 fw-bold" id="historial-tab" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button" role="tab">
-                    <i class="fa-solid fa-list-check me-1"></i> Historial Resuelto (Cobros y Devoluciones)
-                    <span class="badge bg-light text-dark border rounded-pill ms-1">{{ maneos_historial|length }}</span>
+                <button class="nav-link rounded-pill px-4 fw-bold tab-koba-pill" id="historial-tab" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button" role="tab">
+                    <i class="fa-solid fa-list-check me-1"></i> Historial Resuelto
+                    <span class="badge bg-secondary bg-opacity-25 text-dark border rounded-pill ms-1">{{ maneos_historial|length }}</span>
                 </button>
             </li>
         </ul>
@@ -164,7 +204,7 @@
                             <th class="text-center" width="85">CANT</th>
                             <th class="text-end" width="125">VALOR UND</th>
                             <th class="text-end" width="135">SUBTOTAL</th>
-                            <th class="text-center pe-4" width="210">ACCIONES</th>
+                            <th class="text-center pe-4" width="220">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -188,9 +228,9 @@
                             <td>
                                 <div class="fw-bold text-brand-black fs-6">{{ m.producto.nombre }}</div>
                                 {% if m.variante %}
-                                    <span class="badge bg-light text-dark border"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</span>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill"><i class="fa-solid fa-code-branch me-1"></i>{{ m.variante.nombre_variante }}</span>
                                 {% endif %}
-                                <small class="text-muted d-block mt-1">SKU: {{ m.producto.sku }}</small>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">SKU: {{ m.producto.sku }}</small>
                             </td>
                             <td class="text-center">
                                 {% if m.observacion %}
@@ -209,12 +249,12 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 fw-bold">{{ m.cantidad }}</span>
+                                <span class="badge rounded-pill px-3 py-2 fs-6 fw-bold" style="background-color: var(--brand-primary); color: #fff;">{{ m.cantidad }}</span>
                             </td>
-                            <td class="text-end fw-bold text-secondary">
+                            <td class="text-end fw-bold text-secondary" style="font-family: 'Outfit', sans-serif;">
                                 ${{ '{:,.0f}'.format(m.valor_unitario_calculado) }}
                             </td>
-                            <td class="text-end fw-bold text-danger fs-6">
+                            <td class="text-end fw-bold text-danger fs-6" style="font-family: 'Outfit', sans-serif;">
                                 ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
                             </td>
                             <td class="text-center pe-4">
@@ -234,9 +274,13 @@
                         {% else %}
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="fa-solid fa-circle-check fs-1 text-success mb-2 opacity-50"></i>
-                                <p class="mb-0 fw-semibold text-brand-black">Este local no tiene maneos pendientes por resolver.</p>
-                                <small class="text-muted">Todo lo entregado ha sido liquidado o devuelto.</small>
+                                <div class="py-4">
+                                    <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3 text-success" style="width: 64px; height: 64px;">
+                                        <i class="fa-solid fa-circle-check fs-2"></i>
+                                    </div>
+                                    <h5 class="fw-bold text-brand-black mb-1">Este local no tiene maneos pendientes</h5>
+                                    <p class="text-muted small mb-0">Todo lo entregado ha sido liquidado o devuelto al inventario físico.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -274,9 +318,9 @@
                             <td>
                                 <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
                                 {% if m.variante %}
-                                    <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</small>
+                                    <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-brand-primary"></i>Subcat: {{ m.variante.nombre_variante }}</small>
                                 {% endif %}
-                                <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">SKU: {{ m.producto.sku }}</small>
                             </td>
                             <td class="text-center">
                                 {% if m.observacion %}
@@ -288,22 +332,21 @@
                                             {{ m.observacion }}
                                         </div>
                                     </div>
-
                                 {% else %}
                                     <span class="text-muted small">—</span>
                                 {% endif %}
                             </td>
                             <td class="text-center fw-bold fs-6">{{ m.cantidad }}</td>
-                            <td class="text-end fw-bold text-brand-black">
+                            <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif;">
                                 ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
                             </td>
                             <td class="text-center pe-4">
                                 {% if m.estado == 'FACTURADO' %}
-                                    <span class="badge bg-success rounded-pill px-3 py-1 fw-bold">
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1 fw-bold">
                                         <i class="fa-solid fa-cash-register me-1"></i>COBRADO
                                     </span>
                                 {% elif m.estado == 'DEVUELTO' %}
-                                    <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold text-white">
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-3 py-1 fw-bold">
                                         <i class="fa-solid fa-rotate-left me-1"></i>DEVUELTO
                                     </span>
                                 {% else %}
@@ -314,7 +357,10 @@
                         {% else %}
                         <tr>
                             <td colspan="7" class="text-center py-5 text-muted">
-                                No hay movimientos resueltos registrados para este cliente.
+                                <div class="py-4">
+                                    <i class="fa-solid fa-clock-rotate-left fs-2 text-muted opacity-50 mb-2"></i>
+                                    <p class="mb-0 fw-semibold text-brand-black">No hay movimientos resueltos registrados para este cliente.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -369,15 +415,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Modales para Cobro / Facturación de Maneos Activos -->
+<!-- Modales para Cobro / Facturación de Maneos Activos Individuales -->
 {% for m in maneos_activos %}
 <div class="modal fade" id="modalFacturar{{ m.id }}" tabindex="-1" aria-labelledby="modalFacturarLabel{{ m.id }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-bold text-brand-black" id="modalFacturarLabel{{ m.id }}">
-                    <i class="fa-solid fa-cash-register text-success me-2"></i>Cobrar / Facturar Maneo
-                </h5>
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-success bg-opacity-10 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                        <i class="fa-solid fa-cash-register fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalFacturarLabel{{ m.id }}">
+                            Cobrar Maneo
+                        </h5>
+                        <small class="text-muted">Liquidación directa a caja</small>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
@@ -386,40 +440,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
 
                 <div class="modal-body p-4">
-                    <div class="bg-light p-3 rounded-3 mb-3">
+                    <div class="bg-light p-3 rounded-3 mb-3 border">
                         <div class="fw-bold text-brand-black fs-6">{{ m.producto.nombre }}</div>
                         {% if m.variante %}
-                            <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>Subcat: {{ m.variante.nombre_variante }}</small>
+                            <small class="text-muted d-block"><i class="fa-solid fa-code-branch me-1 text-primary"></i>Subcat: {{ m.variante.nombre_variante }}</small>
                         {% endif %}
-                        <small class="text-muted d-block">SKU: {{ m.producto.sku }}</small>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">SKU: {{ m.producto.sku }}</small>
                     </div>
 
-                    <div class="row g-2 mb-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-bold">Cantidad a Cobrar <span class="text-danger">*</span></label>
-                            <input type="number" name="cantidad_vendida" class="form-control" value="{{ m.cantidad }}" min="1" max="{{ m.cantidad }}" required>
+                            <label class="form-label fw-bold small text-brand-black">Cantidad a Cobrar <span class="text-danger">*</span></label>
+                            <input type="number" name="cantidad_vendida" class="form-control bg-light border py-2 fw-bold" value="{{ m.cantidad }}" min="1" max="{{ m.cantidad }}" required>
                             <small class="text-muted" style="font-size:0.75rem;">Total prestadas: {{ m.cantidad }}</small>
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-bold">Precio Unitario ($) <span class="text-danger">*</span></label>
-                            <input type="number" step="any" name="precio_venta" class="form-control" value="{{ '%.0f'|format(m.valor_unitario_calculado) }}" required>
+                            <label class="form-label fw-bold small text-brand-black">Precio Unitario ($) <span class="text-danger">*</span></label>
+                            <input type="number" step="any" name="precio_venta" class="form-control bg-light border py-2 fw-bold text-success" value="{{ '%.0f'|format(m.valor_unitario_calculado) }}" required>
                             <small class="text-muted" style="font-size:0.75rem;">Valor acordado</small>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Método de Pago Recibido</label>
-                        <select name="metodo_pago" class="form-select">
-                            <option value="efectivo">Efectivo</option>
-                            <option value="nequi">Nequi</option>
-                            <option value="daviplata">Daviplata</option>
-                            <option value="tarjeta">Tarjeta / Datáfono</option>
-                            <option value="transferencia">Transferencia Bancaria</option>
+                        <label class="form-label fw-bold small text-brand-black">Método de Pago Recibido</label>
+                        <select name="metodo_pago" class="form-select bg-light border py-2">
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Nequi</option>
+                            <option value="daviplata">📱 Daviplata</option>
+                            <option value="bancolombia">🏦 Bancolombia</option>
+                            <option value="tarjeta">💳 Tarjeta / Datáfono</option>
+                            <option value="transferencia">🔄 Transferencia Bancaria</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light">
-                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
                         <i class="fa-solid fa-check me-1"></i> Confirmar Cobro
                     </button>
@@ -429,10 +484,10 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Modal Devolver Unidades en Estado de Cuenta -->
+<!-- Modal Devolver Unidades -->
 <div class="modal fade" id="devolverModalCliente{{ m.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="origen" value="estado_cuenta"/>
@@ -443,14 +498,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
-                    <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
+                <div class="modal-body p-4 text-dark">
+                    <p class="mb-3 text-dark fs-6">
                         ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
                         {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
                         devuelve <strong class="text-dark fw-bold">{{ cliente.nombre_o_razon_social }}</strong>?
                     </p>
                     <div class="input-group input-group-lg mb-3">
-                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
+                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
                         <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
                     </div>
                     <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
@@ -471,10 +526,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Modal Observación Cliente -->
 <div class="modal fade text-start" id="modalObsCliente{{ m.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-bold text-brand-black">
-                    <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observación del Maneo #{{ m.id }}
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <h5 class="modal-title fw-bold text-brand-black mb-0">
+                    <i class="fa-solid fa-clipboard-check text-brand-primary me-2"></i>Observación del Maneo #{{ m.id }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -483,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted text-uppercase">Nota Actual:</label>
                     {% if m.observacion %}
-                        <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                        <div class="p-3 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                             <p class="mb-0 text-brand-black fw-medium" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
                         </div>
                     {% else %}
@@ -499,11 +554,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="hidden" name="cliente_id" value="{{ cliente.id }}"/>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
-                        <textarea name="observacion" class="form-control bg-light border-0 shadow-sm text-dark" rows="3" placeholder="Escribe aquí las observaciones o notas del maneo...">{{ m.observacion or '' }}</textarea>
+                        <textarea name="observacion" class="form-control bg-light border shadow-none text-dark p-3" rows="3" placeholder="Escribe aquí las observaciones o notas del maneo...">{{ m.observacion or '' }}</textarea>
                     </div>
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
                             <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
                         </button>
                     </div>
@@ -519,21 +574,21 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if m.observacion %}
     <div class="modal fade text-start" id="modalObsHist{{ m.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header border-0 bg-light">
-                    <h5 class="modal-title fw-bold text-brand-black">
-                        <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observación del Maneo Resuelto #{{ m.id }}
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-0 bg-light py-3 px-4">
+                    <h5 class="modal-title fw-bold text-brand-black mb-0">
+                        <i class="fa-solid fa-clipboard-check text-brand-primary me-2"></i>Observación del Maneo Resuelto #{{ m.id }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <p class="mb-2 text-brand-black"><strong>Producto:</strong> {{ m.producto.nombre }} (x{{ m.cantidad }} uds)</p>
                     <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
-                    <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
+                    <div class="p-3 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                         <p class="mb-0 text-brand-black fw-medium" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light">
+                <div class="modal-footer border-0 bg-light p-3">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
@@ -543,11 +598,11 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endfor %}
 
 <!-- Barra Flotante Inferior de Selección Múltiple -->
-<div id="floatingSelectionBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 p-3 bg-dark text-white rounded-pill shadow-lg d-none align-items-center gap-3 z-3" style="max-width: 95%; width: auto; border: 2px solid rgba(255,255,255,0.25); backdrop-filter: blur(10px); z-index: 1060;">
+<div id="floatingSelectionBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 p-3 bg-dark text-white rounded-pill shadow-lg d-none align-items-center gap-3 z-3" style="max-width: 95%; width: auto; border: 1.5px solid rgba(255,255,255,0.2); backdrop-filter: blur(12px); z-index: 1060;">
     <div class="d-flex align-items-center gap-2 ps-2">
         <span class="badge bg-success rounded-pill px-2 py-1 fs-6 fw-bold" id="floatingCountBadge">0</span>
         <span class="small fw-semibold d-none d-sm-inline">Productos Seleccionados:</span>
-        <span class="fs-5 fw-bold text-success" id="floatingTotalText">$0</span>
+        <span class="fs-5 fw-bold text-success" id="floatingTotalText" style="font-family: 'Outfit', sans-serif;">$0</span>
     </div>
     <div class="d-flex align-items-center gap-2">
         <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" id="btnDesmarcarTodos">
@@ -593,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="text-end">
                             <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Total a Recibir</span>
-                            <span class="fs-3 fw-bold text-success" id="txtModalSelTotal">$0</span>
+                            <span class="fs-3 fw-bold text-success" id="txtModalSelTotal" style="font-family: 'Outfit', sans-serif;">$0</span>
                         </div>
                     </div>
 
@@ -751,7 +806,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="text-end">
                             <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Monto Total Consolidado</span>
-                            <span class="fs-3 fw-bold text-success">${{ '{:,.0f}'.format(saldo_pendiente) }}</span>
+                            <span class="fs-3 fw-bold text-success" style="font-family: 'Outfit', sans-serif;">${{ '{:,.0f}'.format(saldo_pendiente) }}</span>
                         </div>
                     </div>
 
@@ -775,7 +830,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td class="ps-3 py-2">
                                         <div class="fw-bold text-brand-black small">{{ m.producto.nombre }}</div>
                                         {% if m.variante %}
-                                            <small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>{{ m.variante.nombre_variante }}</small>
+                                            <small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-brand-primary"></i>{{ m.variante.nombre_variante }}</small>
                                         {% endif %}
                                         <small class="text-muted d-block" style="font-size: 0.72rem;">SKU: {{ m.producto.sku }}</small>
                                     </td>
@@ -1034,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tr.innerHTML = `
                     <td class="ps-3 py-2">
                         <div class="fw-bold text-brand-black small">${nombre}</div>
-                        ${variante ? `<small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-brand-pink"></i>${variante}</small>` : ''}
+                        ${variante ? `<small class="text-muted"><i class="fa-solid fa-code-branch me-1 text-primary"></i>${variante}</small>` : ''}
                         <small class="text-muted d-block" style="font-size: 0.72rem;">SKU: ${sku}</small>
                     </td>
                     <td class="text-center py-2 fw-bold text-brand-black small">${cant}</td>
@@ -1159,7 +1214,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.checked) {
                 containerUnico.classList.add('d-none');
                 containerDividido.classList.remove('d-none');
-                // Si están vacíos, calcular 50% y 50%
                 if (!parseFloat(inputMonto1.value) && !parseFloat(inputMonto2.value)) {
                     const mitad = Math.floor(config.totalAmount / 2);
                     inputMonto1.value = mitad;
@@ -1191,6 +1245,23 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+.kpi-koba-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.kpi-koba-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+.tab-koba-pill.active {
+    background-color: var(--brand-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 139, 139, 0.25) !important;
+}
+.tab-koba-pill:not(.active) {
+    color: #64748b;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+}
 .table-custom tr.table-success td {
     background-color: #d1fae5 !important;
 }

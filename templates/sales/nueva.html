@@ -1,57 +1,145 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Título de Pantalla Renombrado (Requerimento) -->
-<div class="d-flex align-items-center mb-4">
-    <h2 class="fw-bold text-brand-black m-0"><i class="fa-solid fa-cash-register me-2" style="color: var(--brand-pink);"></i>Caja Central</h2>
+<style>
+    /* Estilos Caja Terminal / POS */
+    .pos-total-banner {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1.5px solid #fde68a;
+        border-radius: 18px;
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.05);
+    }
+    .pos-total-amount {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.1rem;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    /* Botones de Métodos de Pago (Pills) */
+    .payment-method-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 1rem;
+    }
+    .payment-pill {
+        flex: 1 1 calc(33.333% - 6px);
+        min-width: 80px;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.55rem 0.4rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #334155;
+        text-align: center;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+    }
+    .payment-pill:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+    }
+    .payment-pill.active {
+        background: #0f172a;
+        color: #ffffff;
+        border-color: #0f172a;
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+    }
+    .payment-pill.active i {
+        color: #ffffff !important;
+    }
+
+    /* Sugerencias Rápidas de Efectivo (+2k, +5k, etc) */
+    .quick-cash-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    .btn-quick-cash {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.25rem 0.6rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-quick-cash:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+</style>
+
+<!-- Título de Pantalla -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-brand-dark m-0 font-heading" style="font-size: 1.85rem;">
+            <i class="fa-solid fa-cash-register text-warning me-2"></i> Caja Terminal / POS
+        </h2>
+        <small class="text-muted">Registro ágil de ventas por código de barras o búsqueda rápida.</small>
+    </div>
 </div>
 
-<div class="row">
+<div class="row g-4">
     <!-- UI Escáner y Carrito -->
     <div class="col-lg-8 mb-4">
         
         <!-- Panel de Escaneo -->
-        <div class="card card-custom p-4 mb-4">
-            <label class="form-label fw-bold text-brand-black">Buscar o Escanear Código</label>
+        <div class="card card-custom p-4 mb-4 border bg-white">
+            <label class="form-label fw-bold text-brand-dark small text-uppercase" style="letter-spacing: 0.5px;">Buscar o Escanear Código</label>
             <div class="d-flex gap-2 position-relative">
-                <div class="input-group input-group-lg shadow-sm border-0 rounded-3 overflow-hidden flex-grow-1">
-                    <span class="input-group-text bg-white border-0"><i class="fa-solid fa-barcode text-muted"></i></span>
-                    <input type="text" class="form-control border-0" id="sku_input" placeholder="Buscar por nombre o SKU..." autocomplete="off" autofocus>
-                    <!-- Botón Secundario Rosa Pastel -->
-                    <button class="btn btn-pink px-4" type="button" id="btn_add_product">
+                <div class="input-group input-group-lg shadow-sm border rounded-pill overflow-hidden flex-grow-1 bg-white">
+                    <span class="input-group-text bg-white border-0 ps-3 text-muted"><i class="fa-solid fa-barcode"></i></span>
+                    <input type="text" class="form-control border-0 bg-white shadow-none ps-2" id="sku_input" placeholder="Buscar por nombre o SKU..." autocomplete="off" autofocus>
+                    <button class="btn btn-dark-pill px-4" type="button" id="btn_add_product">
                         <i class="fa-solid fa-check ms-1"></i> Agregar
                     </button>
                 </div>
-                <button class="btn btn-outline-primary rounded-3 px-3 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalProductoManual" title="Agregar producto de otro local">
-                    <i class="fa-solid fa-plus me-1"></i><i class="fa-solid fa-handshake"></i>
+                <button class="btn btn-outline-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-1 bg-white" type="button" data-bs-toggle="modal" data-bs-target="#modalProductoManual" title="Agregar producto de otro local">
+                    <i class="fa-solid fa-plus"></i><i class="fa-solid fa-handshake"></i>
                 </button>
                 
                 <!-- Resultados del autocompletado -->
-                <div id="autocomplete_results" class="list-group position-absolute shadow rounded-3 border-0" style="top: 100%; left: 0; right: 60px; z-index: 1050; display: none; max-height: 300px; overflow-y: auto;">
+                <div id="autocomplete_results" class="list-group position-absolute shadow rounded-4 border-0" style="top: 100%; left: 0; right: 60px; z-index: 1050; display: none; max-height: 300px; overflow-y: auto;">
                 </div>
             </div>
         </div>
 
         <!-- Tabla Carrito de Compras -->
-        <div class="card card-custom p-0 overflow-hidden">
+        <div class="card card-custom p-0 overflow-hidden border">
             <div class="table-responsive">
                 <table class="table table-custom mb-0 align-middle">
                     <thead class="bg-light">
                         <tr>
-                            <th>Producto Seleccionado</th>
-                            <th class="text-center" width="130">Cantidad</th>
-                            <th class="text-end" width="160">Precio U.</th>
-                            <th class="text-end" width="120">Subtotal</th>
-                            <th class="text-center" width="70"></th>
+                            <th class="ps-4">PRODUCTO SELECCIONADO</th>
+                            <th class="text-center" width="130">CANTIDAD</th>
+                            <th class="text-end" width="160">PRECIO U.</th>
+                            <th class="text-end" width="140">SUBTOTAL</th>
+                            <th class="text-center pe-4" width="70"></th>
                         </tr>
                     </thead>
                     <tbody id="cart_body">
                         <!-- ESPACIO RESERVADO PARA INYECCIÓN JS DINÁMICA -->
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted" id="empty_cart_msg">
-                                <!-- Icono Rosa Pastel -->
-                                <i class="fa-solid fa-cart-arrow-down fs-2 mb-2 d-block text-brand-pink opacity-50"></i>
-                                La venta está vacía actualmente.
+                                <i class="fa-solid fa-basket-shopping fa-3x mb-2 text-black-50 opacity-40"></i>
+                                <div class="fw-semibold">La venta está vacía actualmente.</div>
                             </td>
                         </tr>
                         <!-- Fin items JS -->
@@ -63,21 +151,31 @@
 
     <!-- Panel Vertical Cobro Total -->
     <div class="col-lg-4">
-        <div class="card card-custom p-4 position-sticky" style="top: 100px;">
-            <h4 class="fw-bold text-brand-black mb-4 pb-3 border-bottom">Balance</h4>
-            
-            <div class="d-flex justify-content-between mb-3">
-                <span class="text-muted fw-bold">Unidades Totales:</span>
-                <span class="fw-bold fs-5" id="total_items">0</span>
+        <div class="card card-custom p-4 position-sticky border" style="top: 90px;">
+            <!-- Header Balance -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="sidebar-icon-box icon-box-amber" style="width: 36px; height: 36px; font-size: 1.1rem; margin-right: 0;">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <h5 class="fw-bold text-brand-dark m-0 font-heading">Balance & Cobro</h5>
+                </div>
+                <span class="badge bg-dark rounded-pill px-3 py-2 fw-bold" id="total_items" style="font-size: 0.78rem;">0</span>
             </div>
-            
-            <div class="d-flex justify-content-between mb-4">
-                <span class="text-muted fw-bold align-self-center">Total a Cobrar:</span>
-                <span class="fw-bolder fs-1 text-brand-black" id="total_amount">$0</span>
+
+            <!-- Banner Total a Cobrar (Estilo Foto 4) -->
+            <div class="pos-total-banner">
+                <div>
+                    <span class="small fw-bold text-uppercase text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">TOTAL A COBRAR:</span>
+                    <div class="mt-1">
+                        <span class="badge bg-white text-dark border rounded-pill px-2 py-1 small fw-bold" style="font-size: 0.7rem;">Venta Directa</span>
+                    </div>
+                </div>
+                <div class="pos-total-amount" id="total_amount">$0</div>
             </div>
 
             {% if current_user.rol == 'admin' %}
-            <!-- Selector de Fecha de Venta (colapsable) exclusivo para Admin -->
+            <!-- Selector de Fecha de Venta exclusivo para Admin -->
             <div class="mb-3">
                 <div class="d-flex align-items-center justify-content-between">
                     <small class="text-muted fw-semibold"><i class="fa-regular fa-calendar me-1"></i> Fecha de Venta:</small>
@@ -88,85 +186,114 @@
                     </button>
                 </div>
                 <div id="fecha_venta_container" style="display: none; margin-top: 8px;">
-                    <input type="date" id="fecha_venta_input" class="form-control form-control-sm bg-light border-0 shadow-sm" value="">
-                    <small class="form-text text-muted"><i class="fa-solid fa-circle-info text-primary me-1"></i>Cambia la fecha para registrar ventas de días anteriores.</small>
+                    <input type="date" id="fecha_venta_input" class="form-control form-control-sm rounded-3 border bg-light" value="">
                 </div>
             </div>
             {% endif %}
 
-            <hr class="mb-4">
-
-            <!-- Toggle: Pago Único vs Pago Dividido -->
+            <!-- Sección Método de Pago -->
             <div class="mb-3">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <label class="form-label fw-bold text-brand-black small text-uppercase m-0">Método de Pago</label>
-                    <div class="form-check form-switch ms-auto">
-                        <input class="form-check-input" type="checkbox" id="toggle_pago_mixto" style="cursor: pointer; width: 3rem; height: 1.5rem;">
-                        <label class="form-check-label fw-bold small text-muted" for="toggle_pago_mixto" style="cursor: pointer;">Dividir Pago</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modo 1: Pago Único (por defecto) -->
-            <div id="pago_unico_section">
-                <select id="metodo-pago" class="form-select form-select-lg border-0 shadow-sm bg-light mb-3" style="cursor: pointer;">
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="nequi">📱 Nequi</option>
-                    <option value="bancolombia">🏦 Bancolombia</option>
-                    <option value="daviplata">📱 Daviplata</option>
-                </select>
-            </div>
-
-            <!-- Modo 2: Pago Dividido/Mixto (oculto por defecto) -->
-            <div id="pago_mixto_section" style="display: none;">
-                <!-- Indicador visual del saldo restante -->
-                <div class="alert border-0 shadow-sm py-2 px-3 mb-3" id="saldo_restante_alert" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="fw-bold text-muted text-uppercase"><i class="fa-solid fa-scale-balanced me-1"></i> Saldo por cubrir:</small>
-                        <span class="fw-bolder fs-5" id="saldo_restante" style="color: var(--brand-blue);">$0</span>
-                    </div>
-                    <!-- Barra de progreso visual -->
-                    <div class="progress mt-2" style="height: 6px; border-radius: 10px;">
-                        <div class="progress-bar" id="barra_progreso_pago" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #A3D8DE, #7BC8D0); border-radius: 10px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <label class="form-label fw-bold text-brand-dark small text-uppercase m-0" style="letter-spacing: 0.5px;">Método de Pago</label>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="toggle_pago_mixto" style="cursor: pointer; width: 2.5rem; height: 1.3rem;">
+                        <label class="form-check-label small fw-bold text-muted ms-1" for="toggle_pago_mixto" style="cursor: pointer; font-size: 0.75rem;">Dividir Pago</label>
                     </div>
                 </div>
 
-                <!-- Lista dinámica de pagos parciales -->
-                <div id="pagos_list" class="d-flex flex-column gap-2 mb-3">
-                    <!-- Se inyecta dinámicamente -->
-                </div>
-
-                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold w-100" id="btn_agregar_pago">
-                    <i class="fa-solid fa-plus me-1"></i> Agregar otro método de pago
-                </button>
-            </div>
-
-            <!-- Interruptor para Imprimir Factura / Ticket (Desactivado por defecto) -->
-            <div class="card border-0 bg-light rounded-3 p-2 px-3 mb-3 mt-3 shadow-none">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="rounded-circle d-flex align-items-center justify-content-center" id="print_icon_wrapper" style="width: 32px; height: 32px; background: #e9ecef; color: #6c757d; transition: all 0.2s ease;">
-                            <i class="fa-solid fa-print"></i>
-                        </span>
-                        <div>
-                            <label class="form-check-label fw-bold small text-dark d-block mb-0" for="toggle_imprimir_recibo" style="cursor: pointer;">
-                                Imprimir Factura / Ticket
-                            </label>
-                            <small class="text-muted" id="print_status_label" style="font-size: 0.75rem;">Desactivado</small>
+                <!-- Modo 1: Selector de Pastillas de Método de Pago -->
+                <div id="pago_unico_section">
+                    <input type="hidden" id="metodo-pago" value="efectivo">
+                    <div class="payment-method-pills">
+                        <div class="payment-pill active" data-method="efectivo" onclick="selectPaymentMethod('efectivo')">
+                            <i class="fa-solid fa-money-bill-1-wave text-success"></i>
+                            <span>Efectivo</span>
+                        </div>
+                        <div class="payment-pill" data-method="nequi" onclick="selectPaymentMethod('nequi')">
+                            <i class="fa-solid fa-mobile-screen-button text-purple" style="color: #FF007A;"></i>
+                            <span>Nequi</span>
+                        </div>
+                        <div class="payment-pill" data-method="bancolombia" onclick="selectPaymentMethod('bancolombia')">
+                            <i class="fa-solid fa-building-columns text-warning"></i>
+                            <span>Bancolombia</span>
+                        </div>
+                        <div class="payment-pill" data-method="daviplata" onclick="selectPaymentMethod('daviplata')">
+                            <i class="fa-solid fa-wallet text-danger"></i>
+                            <span>Daviplata</span>
+                        </div>
+                        <div class="payment-pill" data-method="bolt" onclick="selectPaymentMethod('bolt')">
+                            <i class="fa-solid fa-bolt text-warning"></i>
+                            <span>Bolt</span>
                         </div>
                     </div>
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="toggle_imprimir_recibo" style="cursor: pointer; width: 2.75rem; height: 1.4rem;">
+                </div>
+
+                <!-- Modo 2: Pago Dividido/Mixto (oculto por defecto) -->
+                <div id="pago_mixto_section" style="display: none;">
+                    <div class="alert border-0 shadow-sm py-2 px-3 mb-2 rounded-3" id="saldo_restante_alert" style="background: #f1f5f9;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="fw-bold text-muted text-uppercase" style="font-size: 0.72rem;"><i class="fa-solid fa-scale-balanced me-1"></i> Saldo por cubrir:</small>
+                            <span class="fw-bolder fs-6" id="saldo_restante" style="color: var(--brand-primary);">$0</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 5px; border-radius: 10px;">
+                            <div class="progress-bar bg-primary" id="barra_progreso_pago" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
                     </div>
+
+                    <div id="pagos_list" class="d-flex flex-column gap-2 mb-2"></div>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold w-100 py-1" id="btn_agregar_pago" style="font-size: 0.78rem;">
+                        <i class="fa-solid fa-plus me-1"></i> Agregar método
+                    </button>
                 </div>
             </div>
 
-            <!-- Botón de Cobro Masivo Azul Turquesa -->
-            <div class="d-grid gap-2 mt-4">
-                <button type="button" class="btn btn-blue btn-lg rounded-3 py-3 shadow-sm text-uppercase" id="btn_process_sale">
-                    <i class="fa-solid fa-credit-card me-2"></i> Procesar Cobro
+            <!-- Calculadora de Cambio / Monto Recibido (Estilo Foto 4) -->
+            <div class="card border rounded-3 p-3 mb-3 bg-light" id="cashCalculatorSection">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label fw-bold text-brand-dark small text-uppercase m-0" style="font-size: 0.72rem; letter-spacing: 0.5px;">Monto Recibido</label>
+                </div>
+                <div class="input-group input-group-sm mb-2 shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text bg-white border-0 fw-bold">$</span>
+                    <input type="number" id="montoRecibidoInput" class="form-control border-0 fw-bold fs-6 text-dark" placeholder="0" onkeyup="calcularCambio()" onchange="calcularCambio()">
+                </div>
+                <!-- Botones de Dinero Rápido -->
+                <div class="quick-cash-pills">
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(2000)">+2k</button>
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(5000)">+5k</button>
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(10000)">+10k</button>
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(20000)">+20k</button>
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(50000)">+50k</button>
+                    <button type="button" class="btn-quick-cash" onclick="addQuickCash(100000)">+100k</button>
+                    <button type="button" class="btn-quick-cash bg-white text-primary border" onclick="setExactCash()">Exacto</button>
+                </div>
+                <!-- Cambio / Vueltas Display -->
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                    <span class="small fw-bold text-muted">Cambio / Vueltas:</span>
+                    <strong class="fs-5 text-success font-heading" id="cambioDisplay">$0</strong>
+                </div>
+            </div>
+
+            <!-- Interruptor para Imprimir Factura / Ticket -->
+            <div class="d-flex align-items-center justify-content-between bg-light p-2 px-3 rounded-3 mb-3 border">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-print text-muted" id="print_icon"></i>
+                    <label class="form-check-label small fw-bold text-dark m-0" for="toggle_imprimir_recibo" style="cursor: pointer;">
+                        Imprimir Ticket
+                    </label>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="toggle_imprimir_recibo" style="cursor: pointer;">
+                </div>
+            </div>
+
+            <!-- Botón de Cobro -->
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-dark-pill btn-lg py-3 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btn_process_sale">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Procesar Cobro</span>
                 </button>
-                <button type="button" class="btn btn-light mt-2 fw-bold text-muted" id="btn_clear_cart">
+                <button type="button" class="btn btn-light rounded-pill fw-bold text-muted btn-sm py-2" id="btn_clear_cart">
                     Limpiar Venta
                 </button>
             </div>

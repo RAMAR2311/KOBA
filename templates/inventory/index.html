@@ -1,21 +1,134 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-brand-black m-0">Inventario Central</h2>
+<style>
+    /* Estilos Inventario Central Estilo Foto 3 */
+    .inventory-kpi-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 20px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.04);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        border-top: 4px solid var(--brand-primary);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .inventory-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.08);
+    }
+
+    .kpi-circle-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background-color: #ccfbf1;
+        color: #0d9488;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .inv-table-header {
+        border-top: 2px solid #eab308;
+    }
+</style>
+
+<!-- Header Principal con Acciones -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold text-brand-dark m-0" style="font-size: 1.85rem;">Inventario Central</h2>
+    </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-success rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#importarModal">
-            <i class="fa-solid fa-file-excel me-1"></i> Importar Masivo
+        <button type="button" class="btn btn-outline-success rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2 bg-white" data-bs-toggle="modal" data-bs-target="#importarModal">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Importar Masivo</span>
         </button>
-        <a href="/inventory/nuevo" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
-            <i class="fa-solid fa-plus me-1"></i> Nuevo Producto
+        <a href="/inventory/nuevo" class="btn btn-dark-pill px-4 py-2 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>Nuevo Producto</span>
         </a>
     </div>
 </div>
 
+<!-- KPI Cards Superiores (3 Tarjetas Estilo Foto 3) -->
+<div class="row g-3 mb-4">
+    <!-- 1. Cantidad de Productos -->
+    <div class="col-12 col-md-4">
+        <div class="inventory-kpi-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="small fw-bold text-uppercase text-muted" style="letter-spacing: 0.5px;">Cantidad de Productos</span>
+                    <h2 class="fw-extrabold text-brand-dark mt-1 mb-0 font-heading" style="font-size: 2rem;">
+                        {{ total_unidades_fisicas }} <span style="font-size: 1.1rem; color: #64748b; font-weight: 600;">uds.</span>
+                    </h2>
+                </div>
+                <div class="kpi-circle-icon">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <small class="text-muted fw-semibold">
+                    <i class="fa-solid fa-tag text-secondary me-1"></i> {{ total_productos }} referencias activas
+                </small>
+                <span class="badge bg-light text-dark border rounded-pill px-2 py-1 small">Stock Físico</span>
+            </div>
+        </div>
+    </div>
 
+    <!-- 2. Valor Productos a Costo -->
+    <div class="col-12 col-md-4">
+        <div class="inventory-kpi-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="small fw-bold text-uppercase text-muted" style="letter-spacing: 0.5px;">Valor Productos a Costo</span>
+                    <h2 class="fw-extrabold text-brand-dark mt-1 mb-0 font-heading" style="font-size: 2rem;">
+                        ${{ (valor_costo)|cop }}
+                    </h2>
+                </div>
+                <div class="kpi-circle-icon">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <small class="text-muted fw-semibold">
+                    <i class="fa-solid fa-calculator text-primary me-1"></i> Inversión en inventario
+                </small>
+                <span class="badge bg-light text-dark border rounded-pill px-2 py-1 small">Costo Adquisición</span>
+            </div>
+        </div>
+    </div>
 
-<!-- Buscador Dinámico de Inventario -->
+    <!-- 3. Valor Productos a Venta -->
+    <div class="col-12 col-md-4">
+        <div class="inventory-kpi-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="small fw-bold text-uppercase text-muted" style="letter-spacing: 0.5px;">Valor Productos a Venta</span>
+                    <h2 class="fw-extrabold text-brand-dark mt-1 mb-0 font-heading" style="font-size: 2rem;">
+                        ${{ (valor_sugerido)|cop }}
+                    </h2>
+                </div>
+                <div class="kpi-circle-icon">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <small class="text-success fw-bold">
+                    <i class="fa-solid fa-arrow-trend-up me-1"></i> Margen: +${{ ((valor_sugerido - valor_costo))|cop }}
+                </small>
+                <span class="badge bg-light text-dark border rounded-pill px-2 py-1 small">PVP Sugerido</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Buscador Dinámico de Inventario Estilo Foto 3 -->
 <div class="card card-custom p-3 mb-4 border-0 shadow-sm bg-white">
     <div class="row align-items-center">
         <div class="col-md-8 col-lg-7 position-relative">
@@ -35,7 +148,7 @@
                     <button class="btn btn-light border-0 px-3 text-muted {% if not q %}d-none{% endif %}" type="button" id="clearSearch" title="Limpiar búsqueda">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
-                    <button type="submit" class="btn btn-blue px-4 fw-bold">
+                    <button type="submit" class="btn btn-dark-pill px-4 fw-bold">
                         Buscar
                     </button>
                 </div>
@@ -48,33 +161,34 @@
             {% if q %}
             <div class="d-inline-flex align-items-center bg-light border rounded-pill px-3 py-1 me-2 mb-1">
                 <span class="small text-muted me-1">Filtro activo:</span>
-                <strong class="small text-brand-pink me-2">"{{ q }}"</strong>
+                <strong class="small text-primary me-2">"{{ q }}"</strong>
                 <a href="{{ url_for('inventory_bp.index') }}" class="text-secondary hover-danger text-decoration-none" title="Quitar filtro">
                     <i class="fa-solid fa-circle-xmark"></i>
                 </a>
             </div>
             {% endif %}
-            <small class="text-muted fw-bold text-uppercase d-block d-sm-inline" style="font-size: 0.75rem;">
-                Mostrando <span id="visibleCount" class="text-brand-pink">{% if q %}{{ paginacion.total }}{% else %}{{ productos|length }}{% endif %}</span>
-                de <strong>{{ total_productos }}</strong> productos
-                {% if paginacion.pages > 1 %}<span class="text-muted">&nbsp;· pág. {{ paginacion.page }}/{{ paginacion.pages }}</span>{% endif %}
+            <small class="text-muted fw-bold text-uppercase d-block d-sm-inline" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                MOSTRANDO <span id="visibleCount" class="text-brand-dark">{% if q %}{{ paginacion.total }}{% else %}{{ productos|length }}{% endif %}</span>
+                DE <strong>{{ total_productos }}</strong> PRODUCTOS
+                {% if paginacion.pages > 1 %}<span class="text-muted">&nbsp;· PÁG. {{ paginacion.page }}/{{ paginacion.pages }}</span>{% endif %}
             </small>
         </div>
     </div>
 </div>
 
-<div class="card card-custom p-0 overflow-hidden">
+<!-- Tabla de Inventario Estilo Foto 3 -->
+<div class="card card-custom p-0 overflow-hidden border">
     <div class="table-responsive">
-        <table class="table table-hover table-custom mb-0">
+        <table class="table table-hover table-custom mb-0 inv-table-header">
             <thead class="bg-light">
                 <tr>
-                    <th width="120" class="ps-4">SKU</th>
+                    <th width="140" class="ps-4">SKU</th>
                     <th>PRODUCTO</th>
                     <th width="150" class="text-center">STOCK</th>
                     <th width="150" class="text-end">PRECIO COSTO</th>
                     <th width="150" class="text-end">PRECIO MÍNIMO</th>
-                    <th width="150" class="text-end pe-4">PRECIO SUGERIDO</th>
-                    <th width="220" class="text-center">ACCIONES</th>
+                    <th width="160" class="text-end pe-4">PRECIO SUGERIDO</th>
+                    <th width="240" class="text-center">ACCIONES</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,25 +199,23 @@
                     data-sku="{{ p.sku|lower }}" 
                     data-nombre="{{ p.nombre|lower }}" 
                     data-variantes="{% if p.variantes %}{% for v in p.variantes %}{{ v.nombre_variante|lower }} {% endfor %}{% endif %}">
-                    <td class="text-muted text-nowrap">
+                    <td class="text-muted text-nowrap ps-4">
                         {% if p.variantes %}
                             <button class="btn btn-sm btn-light border me-1 rounded-circle shadow-sm p-1" style="width: 28px; height: 28px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVariantes{{ p.id }}" aria-expanded="false" title="Ver Subcategorías">
                                 <i class="fa-solid fa-chevron-down small"></i>
                             </button>
                         {% endif %}
-                        <small><strong>{{ p.sku }}</strong></small>
+                        <small class="fw-bold text-dark">{{ p.sku }}</small>
                     </td>
-                    <td class="fw-semibold text-brand-black">{{ p.nombre }}</td>
-                    <td>
-                        <!-- Regla Estricta: Badge rojo si el stock <= 3 -->
+                    <td class="fw-bold text-brand-dark">{{ p.nombre }}</td>
+                    <td class="text-center">
                         {% if p.total_stock <= 3 %}
-                            <span class="badge bg-danger rounded-pill px-3 py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ p.total_stock }} (Stock Bajo)</span>
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ p.total_stock }} (Stock Bajo)</span>
                         {% else %}
-                            <!-- Badge en Rosa Pastel para stock normal -->
-                            <span class="badge bg-brand-pink text-dark rounded-pill px-3 py-2 border">{{ p.total_stock }} unidades</span>
+                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">{{ p.total_stock }} unidades</span>
                         {% endif %}
                     </td>
-                    <td class="text-end fw-bold" style="color: var(--brand-pink);">
+                    <td class="text-end fw-bold" style="color: #d97706;">
                         {% if p.rango_costos %}
                             {% if p.rango_costos is number %}
                                 ${{ (p.rango_costos)|cop }}
@@ -131,7 +243,7 @@
                             ${{ (p.precio_minimo)|cop }}
                         {% endif %}
                     </td>
-                    <td class="text-end fw-bold text-brand-black pe-4">
+                    <td class="text-end fw-extrabold text-brand-dark pe-4">
                         {% if p.rango_precios %}
                             {% if p.rango_precios is number %}
                                 ${{ (p.rango_precios)|cop }}
@@ -146,21 +258,23 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill hover-primary me-1" title="Gestionar Subcategorías" data-bs-toggle="modal" data-bs-target="#variantesModal{{ p.id }}">
-                            <i class="fa-solid fa-sitemap me-1"></i> Gestionar
-                        </button>
-                        <a href="{{ url_for('inventory_bp.ver_producto', id=p.id) }}" class="btn btn-sm btn-outline-info rounded-pill hover-primary me-1" title="Ver Detalle">
-                            <i class="fa-solid fa-eye"></i>
-                        </a>
-                        <a href="{{ url_for('inventory_bp.editar_producto', id=p.id) }}" class="btn btn-sm text-secondary hover-primary me-1" title="Editar Maestro">
-                            <i class="fa-solid fa-pen"></i>
-                        </a>
-                        <form method="POST" action="{{ url_for('inventory_bp.eliminar_producto', id=p.id) }}" class="d-inline" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de que desea ELIMINAR PERMANENTEMENTE este producto del sistema en la Nube? Esto no se puede deshacer.');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm text-danger hover-danger" title="Eliminar Producto">
-                                <i class="fa-solid fa-trash-can"></i>
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" title="Gestionar Subcategorías" data-bs-toggle="modal" data-bs-target="#variantesModal{{ p.id }}">
+                                <i class="fa-solid fa-sitemap me-1"></i> Subcategorías
                             </button>
-                        </form>
+                            <a href="{{ url_for('inventory_bp.ver_producto', id=p.id) }}" class="btn btn-sm btn-light text-primary rounded-circle shadow-none p-1" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;" title="Ver Detalle">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('inventory_bp.editar_producto', id=p.id) }}" class="btn btn-sm btn-light text-dark rounded-circle shadow-none p-1" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;" title="Editar Maestro">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('inventory_bp.eliminar_producto', id=p.id) }}" class="d-inline m-0" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de que desea ELIMINAR PERMANENTEMENTE este producto del sistema en la Nube? Esto no se puede deshacer.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-light text-danger rounded-circle shadow-none p-1" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;" title="Eliminar Producto">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% if p.variantes %}

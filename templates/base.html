@@ -22,219 +22,353 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* REGLA DE BRANDING ESTRICTA Y COLORES: KOBA (MODO CLARO) */
+        /* REGLA DE BRANDING ESTRICTA Y COLORES: KOBA PREMIUM */
         :root {
-            --brand-red: #008B8B;    /* Color principal del logo (Teal oscuro para contraste) */
-            --brand-blue: #008B8B;   /* Color principal del logo (Teal oscuro para contraste) */
-            --brand-cyan: #85FFFF;   /* Color cyan brillante del logo */
-            --brand-black: #333333;  /* Texto oscuro */
-            --brand-white: #FFFFFF;  /* Blanco */
+            --brand-primary: #008B8B;        /* Teal principal Koba */
+            --brand-primary-hover: #007373;
+            --brand-primary-light: #e6f7f7;
+            --brand-cyan: #06b6d4;           /* Cyan brillante */
+            --brand-cyan-light: #e0f2fe;
+            --brand-amber: #d97706;          /* Acento cálido/dorado */
+            --brand-amber-light: #fef3c7;
+            --brand-dark: #0f172a;           /* Azul noche profundo */
+            --brand-dark-surface: #1e293b;
+            --brand-black: #1e293b;          /* Texto oscuro */
+            --brand-muted: #64748b;          /* Texto secundario */
+            --brand-bg: #f8fafc;             /* Fondo de la app */
+            --brand-card-bg: #ffffff;        /* Tarjetas */
+            --brand-border: #e2e8f0;         /* Bordes suaves */
             
-            --brand-bg: #F8F9FA;     /* Fondo claro */
-            --brand-card-bg: #FFFFFF; /* Tarjetas blancas */
-            
-            --brand-neon-glow: none;
+            --brand-red: #008B8B;            /* Compatibilidad */
+            --brand-blue: #008B8B;           /* Compatibilidad */
         }
 
         body {
             background-color: var(--brand-bg);
             color: var(--brand-black);
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
+            letter-spacing: -0.01em;
         }
 
-        /* Feedback táctil inmediato en móvil (elimina sensación de lentitud al pulsar) */
+        h1, h2, h3, h4, h5, h6, .font-heading {
+            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Feedback táctil */
         button:active, 
         .btn:active, 
         .nav-link:active, 
         .product-card:active {
             transform: scale(0.97) !important;
-            transition: transform 0.06s ease-in-out !important;
+            transition: transform 0.08s ease-in-out !important;
         }
 
-        /* Clases base en modo claro */
-        .bg-brand-blue { background-color: var(--brand-card-bg) !important; color: var(--brand-black); border: 1px solid #dee2e6; }
-        .bg-brand-pink { background-color: var(--brand-red) !important; color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .bg-brand-white { background-color: var(--brand-card-bg) !important; color: var(--brand-black); border: 1px solid #dee2e6; }
-        
+        /* Clases utilitarias de marca */
+        .text-brand-primary { color: var(--brand-primary) !important; }
+        .text-brand-amber { color: var(--brand-amber) !important; }
+        .text-brand-dark { color: var(--brand-dark) !important; }
         .text-brand-black { color: var(--brand-black) !important; }
-        .text-brand-pink { color: var(--brand-red) !important; }
-        .text-brand-blue { color: #0f766e !important; }
-        
-        .modal-content {
-            color: #1e293b !important;
-            background-color: #ffffff !important;
-        }
-        .navbar-custom {
-            background-color: var(--brand-black);
-            border-bottom: 2px solid var(--brand-red);
-            padding: 0.85rem 0;
-            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.15);
-        }
-        
-        .navbar-custom .navbar-brand {
-            font-weight: 800;
-            color: var(--brand-white) !important;
-            font-size: 1.6rem;
-            letter-spacing: -0.5px;
-            white-space: nowrap;
-        }
+        .text-brand-pink { color: var(--brand-primary) !important; }
+        .text-brand-blue { color: var(--brand-primary) !important; }
 
-        /* Optimización en celulares para que el badge de Zenic y el nombre del local no colisionen */
-        @media (max-width: 575.98px) {
-            .navbar-custom {
-                padding: 0.55rem 0 !important;
-            }
-            .navbar-custom .navbar-brand {
-                font-size: 1.15rem !important;
-                letter-spacing: -0.3px;
-            }
-            .navbar-custom .navbar-brand img {
-                height: 26px !important;
-                margin-right: 0.35rem !important;
-            }
-            .zenic-badge {
-                font-size: 0.72rem !important;
-                padding: 0.2rem 0.55rem !important;
-            }
-            .zenic-badge i {
-                font-size: 0.78rem !important;
-            }
-        }
+        .bg-brand-primary { background-color: var(--brand-primary) !important; color: #fff; }
+        .bg-brand-pink { background-color: var(--brand-primary) !important; color: #fff; }
+        .bg-brand-blue { background-color: var(--brand-card-bg) !important; color: var(--brand-black); border: 1px solid var(--brand-border); }
 
-        .navbar-custom .nav-link {
-            color: var(--brand-white);
-            font-weight: 500;
-            margin-left: 1rem;
-            transition: color 0.2s;
-        }
-
-        .navbar-custom .nav-link:hover {
-            color: var(--brand-red);
-        }
-
-        /* Botones Pro */
-        .btn-pink { /* Botón primario neón */
-            background-color: var(--brand-red);
-            color: #000;
+        /* Estilos de Botones Pro */
+        .btn-blue, .btn-pink, .btn-brand {
+            background-color: var(--brand-primary);
+            color: #ffffff !important;
             font-weight: 700;
-            border: none;
+            border: 1px solid transparent;
+            border-radius: 50rem;
+            padding: 0.55rem 1.35rem;
             transition: all 0.2s ease-in-out;
-            box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 139, 139, 0.2);
         }
-        .btn-pink:hover {
-            background-color: #00E5E5;
-            color: #000;
-            transform: translateY(-2px);
-            box-shadow: var(--brand-neon-glow);
-        }
-
-        .btn-blue { /* Botón de acción destacado */
-            background-color: #0f766e;
-            color: #ffffff !important;
-            font-weight: 600;
-            border: 1px solid #0f766e;
-            transition: all 0.2s ease-in-out;
-        }
-        .btn-blue:hover {
-            background-color: #115e59;
+        .btn-blue:hover, .btn-pink:hover, .btn-brand:hover {
+            background-color: var(--brand-primary-hover);
             color: #ffffff !important;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+            box-shadow: 0 6px 16px rgba(0, 139, 139, 0.3);
         }
 
-        /* Superficies */
+        .btn-dark-pill {
+            background-color: var(--brand-dark);
+            color: #ffffff !important;
+            font-weight: 700;
+            border: 1px solid var(--brand-dark);
+            border-radius: 50rem;
+            padding: 0.55rem 1.35rem;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .btn-dark-pill:hover {
+            background-color: #1e293b;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+        }
+
+        .btn-amber-pill {
+            background-color: #fef3c7;
+            color: #92400e !important;
+            font-weight: 700;
+            border: 1px solid #fde68a;
+            border-radius: 50rem;
+            padding: 0.55rem 1.35rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-amber-pill:hover {
+            background-color: #fde68a;
+            color: #78350f !important;
+            transform: translateY(-2px);
+        }
+
+        /* Superficies y Tarjetas */
         .card-custom {
             background-color: var(--brand-card-bg);
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            color: #1e293b;
+            border: 1px solid var(--brand-border);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            color: var(--brand-black);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         /* Tablas */
         .table-custom {
             background-color: #ffffff;
-            border-radius: 12px;
-            color: #1e293b;
+            border-radius: 16px;
+            color: var(--brand-black);
         }
         .table-custom thead th {
-            color: #0f766e;
+            color: var(--brand-muted);
             background-color: #f8fafc;
-            border-bottom: 2px solid #0f766e;
+            border-bottom: 2px solid #e2e8f0;
             text-transform: uppercase;
             font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 0.5px;
-            padding: 1rem 1rem;
+            padding: 1.1rem 1rem;
         }
         .table-custom tbody td {
-            padding: 1rem 1rem;
+            padding: 1.1rem 1rem;
             vertical-align: middle;
-            border-bottom: 1px solid #e2e8f0;
-            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+            color: var(--brand-black);
         }
 
-        /* Sidebar Offcanvas Estilos (Dark Mode Adaptado a KOBA) */
-        .offcanvas {
-            background-color: var(--brand-black) !important;
-            color: #E0E0E0 !important;
-            border-right: 1px solid #222 !important;
+        /* Navbar KOBA */
+        .navbar-custom {
+            background-color: var(--brand-dark);
+            border-bottom: 2px solid var(--brand-primary);
+            padding: 0.85rem 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         }
-        .offcanvas-header {
-            background-color: var(--brand-black) !important;
-            border-bottom: 1px solid var(--brand-cyan) !important;
+        
+        .navbar-custom .navbar-brand {
+            font-weight: 800;
+            color: #ffffff !important;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
         }
-        .offcanvas-title {
-            color: var(--brand-cyan) !important;
-            text-shadow: 0 0 5px rgba(133,255,255,0.3);
+
+        @media (max-width: 575.98px) {
+            .navbar-custom { padding: 0.55rem 0 !important; }
+            .navbar-custom .navbar-brand { font-size: 1.15rem !important; }
+            .navbar-custom .navbar-brand img { height: 26px !important; margin-right: 0.35rem !important; }
+            .zenic-badge { font-size: 0.72rem !important; padding: 0.2rem 0.55rem !important; }
         }
-        .offcanvas .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
+
+        /* SIDEBAR OFFCANVAS (ESTILO KOBA BRAND) */
+        .sidebar-offcanvas {
+            width: 310px !important;
+            background-color: #f8fafc !important;
+            border-right: 1px solid #e2e8f0 !important;
         }
-        .offcanvas-body .nav-link {
-            color: #E0E0E0 !important;
-            transition: all 0.2s ease-in-out;
+        .sidebar-header {
+            background: linear-gradient(135deg, #0f172a 0%, #004d4d 100%) !important;
+            padding: 1.25rem 1.25rem !important;
+            border-bottom: 2px solid var(--brand-primary);
         }
-        .offcanvas-body .fa-solid {
-            color: var(--brand-cyan) !important;
+        .sidebar-user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-cyan) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0, 139, 139, 0.35);
         }
-        .offcanvas-body .nav-link:hover {
-            background-color: rgba(133, 255, 255, 0.1);
+        .sidebar-role-badge {
+            background: rgba(6, 182, 212, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        .sidebar-close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            border: none;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .sidebar-close-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+        .sidebar-group-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #64748b;
+            margin: 1.2rem 0 0.5rem 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sidebar-group-title::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background: #e2e8f0;
+            margin-left: 6px;
+        }
+
+        /* Botón de Menú Estilo Card */
+        .sidebar-card-btn {
+            background: #ffffff;
+            border: 1px solid #edf2f7;
+            border-radius: 16px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 0.92rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            margin-bottom: 0.5rem;
+        }
+        .sidebar-card-btn:hover {
+            background: #ffffff;
+            border-color: var(--brand-primary);
             transform: translateX(4px);
-            border-left: 3px solid var(--brand-cyan) !important;
-            color: var(--brand-cyan) !important;
-            text-shadow: 0 0 5px rgba(133,255,255,0.3);
+            box-shadow: 0 6px 16px rgba(0, 139, 139, 0.1);
+            color: var(--brand-primary);
         }
-        /* Ajustes específicos de Bootstrap utilitarios en el sidebar */
-        .offcanvas-body .border-bottom { border-bottom-color: #444 !important; }
-        .offcanvas-body .bg-light { background-color: #2a2a2a !important; border-color: #444 !important; color: #E0E0E0 !important; }
-        .offcanvas-body .text-muted { color: #aaa !important; }
+        .sidebar-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-right: 0.85rem;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-card-btn:hover .sidebar-icon-box {
+            transform: scale(1.08);
+        }
+
+        /* Tarjeta Destacada Arqueo de Caja */
+        .sidebar-card-arqueo {
+            background: linear-gradient(135deg, #f0fdfa 0%, #e6f7f7 100%) !important;
+            border: 1.5px solid #99e6e6 !important;
+            box-shadow: 0 4px 12px rgba(0, 139, 139, 0.1) !important;
+        }
+        .sidebar-card-arqueo:hover {
+            border-color: var(--brand-primary) !important;
+            transform: translateX(4px);
+        }
+
+        /* Paleta de Icon Boxes con Acento Teal/Cyan de Koba */
+        .icon-box-koba { background-color: var(--brand-primary-light); color: var(--brand-primary); }
+        .icon-box-cyan { background-color: #e0f2fe; color: #0284c7; }
+        .icon-box-purple { background-color: #f3e8ff; color: #9333ea; }
+        .icon-box-teal { background-color: #e6f7f7; color: #008B8B; }
+        .icon-box-amber { background-color: #fef3c7; color: #d97706; }
+        .icon-box-blue { background-color: #dbeafe; color: #2563eb; }
+        .icon-box-violet { background-color: #ede9fe; color: #7c3aed; }
+        .icon-box-rose { background-color: #ffe4e6; color: #e11d48; }
+        .icon-box-pink { background-color: #fce7f3; color: #db2777; }
+        .icon-box-gold { background-color: #e6f7f7; color: #008B8B; }
+        .icon-box-emerald { background-color: #d1fae5; color: #059669; }
+
+        /* Botón Instalar App PWA */
+        .btn-sidebar-pwa {
+            background: linear-gradient(135deg, #e6f7f7 0%, #ccfbf1 100%);
+            border: 1.5px solid #99e6e6;
+            color: #007373;
+            font-weight: 800;
+            font-size: 0.95rem;
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 139, 139, 0.1);
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .btn-sidebar-pwa:hover {
+            background: #99e6e6;
+            color: #004d4d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 139, 139, 0.2);
+        }
     </style>
 </head>
 <body>
     <!-- Navbar KOBA -->
-    <nav class="navbar navbar-custom mb-5 position-relative">
-        <div class="container-fluid px-3 d-flex justify-content-between align-items-center">
+    <nav class="navbar navbar-custom mb-4 position-relative">
+        <div class="container-fluid px-3 px-lg-4 d-flex justify-content-between align-items-center">
             
             {% if current_user.is_authenticated %}
             <!-- Botón Hamburguesa (Izquierda) -->
-            <button class="navbar-toggler border-0 shadow-none p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
-                <i class="fa-solid fa-bars fs-3" style="color: var(--brand-cyan); text-shadow: 0 0 5px rgba(133,255,255,0.5);"></i>
+            <button class="navbar-toggler border-0 shadow-none p-2 rounded-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" style="background: rgba(255,255,255,0.08);">
+                <i class="fa-solid fa-bars fs-4 text-white"></i>
             </button>
             {% else %}
-            <!-- Spacer if not authenticated -->
             <div style="width: 40px;"></div>
             {% endif %}
 
             <!-- Brand Logo (Centro) -->
             <a class="navbar-brand d-flex align-items-center fw-bold m-0 position-absolute start-50 translate-middle-x" href="{{ url_for('index') }}">
-                <img src="{{ url_for('static', filename='img/KOBA.png') }}" alt="KOBA" style="height: 38px; width: auto; filter: drop-shadow(0 0 8px rgba(0,255,255,0.5));" class="me-2 rounded">
+                <img src="{{ url_for('static', filename='img/KOBA.png') }}" alt="KOBA" style="height: 38px; width: auto;" class="me-2 rounded">
                 KOBA
             </a>
 
@@ -260,158 +394,250 @@
         </div>
     </nav>
 
-
     {% if current_user.is_authenticated %}
-    <!-- Offcanvas Menú Lateral (Sidebar) -->
-    <div class="offcanvas offcanvas-start border-0 shadow" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" style="width: 290px;">
-        <div class="offcanvas-header bg-brand-pink border-bottom d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-2">
-                <h5 class="offcanvas-title fw-bold text-white m-0" id="offcanvasNavbarLabel">
-                    <i class="fa-solid fa-user-circle me-1"></i>{{ current_user.rol | capitalize }}
-                </h5>
-                {% if current_user.rol == 'admin' and (pago_servidor.estado == 'pagado' or pago_servidor.estado == 'al_dia') %}
-                <span class="badge bg-white text-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.70rem; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalPagoServidor">
-                    <i class="fa-solid fa-circle-check text-success me-1"></i>Zenic al día
-                </span>
+    <!-- Offcanvas Menú Lateral (Sidebar Moderno Estilo Foto 2) -->
+    <div class="offcanvas offcanvas-start sidebar-offcanvas border-0 shadow-lg" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+        <!-- Sidebar Header Oscuro -->
+        <div class="sidebar-header d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <div class="sidebar-user-avatar">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-white mb-0">{{ current_user.nombre if current_user.nombre else (current_user.rol | capitalize) }}</h6>
+                    <span class="sidebar-role-badge mt-1 text-uppercase">{{ current_user.rol }}</span>
+                </div>
+            </div>
+            <button type="button" class="sidebar-close-btn" data-bs-dismiss="offcanvas" aria-label="Close">
+                <i class="fa-solid fa-xmark fs-5"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Body Claro con Menús Tipo Tarjeta -->
+        <div class="offcanvas-body d-flex flex-column p-3">
+            <div class="w-100 mb-auto">
+                {% if current_user.rol == 'admin' %}
+                    <!-- SECCIÓN: PRINCIPAL -->
+                    <div class="sidebar-group-title">Principal</div>
+                    <a class="sidebar-card-btn" href="/admin/dashboard">
+                        <div class="sidebar-icon-box icon-box-purple">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <span>Dashboard General</span>
+                    </a>
+
+                    <!-- SECCIÓN: OPERACIONES & VENTAS -->
+                    <div class="sidebar-group-title">Operaciones & Ventas</div>
+                    
+                    <!-- Módulo Inventario Desplegable -->
+                    <div class="mb-2">
+                        <a class="sidebar-card-btn d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseInventario" role="button" aria-expanded="false">
+                            <div class="d-flex align-items-center">
+                                <div class="sidebar-icon-box icon-box-teal">
+                                    <i class="fa-solid fa-box"></i>
+                                </div>
+                                <span>Módulo Inventario</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down small text-muted"></i>
+                        </a>
+                        <div class="collapse ps-3 pe-1 mb-2" id="collapseInventario">
+                            <a class="sidebar-card-btn mb-1 py-2" href="/inventory">
+                                <div class="sidebar-icon-box icon-box-teal" style="width: 32px; height: 32px; font-size: 0.95rem;">
+                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                </div>
+                                <span class="small">Inventario Tienda</span>
+                            </a>
+                            <a class="sidebar-card-btn mb-1 py-2" href="/sales/catalogo">
+                                <div class="sidebar-icon-box icon-box-amber" style="width: 32px; height: 32px; font-size: 0.95rem;">
+                                    <i class="fa-solid fa-book-open"></i>
+                                </div>
+                                <span class="small">Catálogo Físico</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Módulo Caja Desplegable -->
+                    <div class="mb-2">
+                        <a class="sidebar-card-btn d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseCaja" role="button" aria-expanded="false">
+                            <div class="d-flex align-items-center">
+                                <div class="sidebar-icon-box icon-box-amber">
+                                    <i class="fa-solid fa-cash-register"></i>
+                                </div>
+                                <span>Caja Registradora</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down small text-muted"></i>
+                        </a>
+                        <div class="collapse ps-3 pe-1 mb-2" id="collapseCaja">
+                            <a class="sidebar-card-btn mb-1 py-2" href="/sales/caja_visual">
+                                <div class="sidebar-icon-box icon-box-teal" style="width: 32px; height: 32px; font-size: 0.95rem;">
+                                    <i class="fa-solid fa-store"></i>
+                                </div>
+                                <span class="small">Caja Rápida Visual</span>
+                            </a>
+                            <a class="sidebar-card-btn mb-1 py-2" href="/sales/nueva">
+                                <div class="sidebar-icon-box icon-box-amber" style="width: 32px; height: 32px; font-size: 0.95rem;">
+                                    <i class="fa-solid fa-barcode"></i>
+                                </div>
+                                <span class="small">Caja Terminal / POS</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: ADMINISTRACIÓN -->
+                    <div class="sidebar-group-title">Administración</div>
+                    
+                    <a class="sidebar-card-btn" href="/admin/vendedores">
+                        <div class="sidebar-icon-box icon-box-blue">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <span>Personal & Equipo</span>
+                    </a>
+
+                    <a class="sidebar-card-btn" href="/proveedores">
+                        <div class="sidebar-icon-box icon-box-violet">
+                            <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <span>Proveedores</span>
+                    </a>
+
+                    <a class="sidebar-card-btn" href="/gastos">
+                        <div class="sidebar-icon-box icon-box-rose">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <span>Control de Gastos</span>
+                    </a>
+
+                    <a class="sidebar-card-btn" href="/clientes">
+                        <div class="sidebar-icon-box icon-box-teal">
+                            <i class="fa-solid fa-users-line"></i>
+                        </div>
+                        <span>Clientes y Locales</span>
+                    </a>
+
+                    <a class="sidebar-card-btn" href="/admin/maneos">
+                        <div class="sidebar-icon-box icon-box-pink">
+                            <i class="fa-solid fa-handshake"></i>
+                        </div>
+                        <span>Aprobaciones / Maneos</span>
+                    </a>
+
+                    <!-- SECCIÓN: CIERRE DE CAJA -->
+                    <div class="sidebar-group-title">Cierre de Caja</div>
+                    <a class="sidebar-card-btn sidebar-card-arqueo" href="/admin/arqueo">
+                        <div class="sidebar-icon-box icon-box-gold">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div>
+                            <div>Arqueo de Caja</div>
+                            <small class="text-muted fw-normal" style="font-size: 0.75rem;">Cuadre y cierre diario</small>
+                        </div>
+                    </a>
+
+                {% elif current_user.rol == 'vendedor' %}
+                    <!-- SECCIÓN: OPERACIONES & VENTAS (CAJERO) -->
+                    <div class="sidebar-group-title">Operaciones</div>
+                    <a class="sidebar-card-btn" href="/sales/caja_visual">
+                        <div class="sidebar-icon-box icon-box-teal">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <span>Caja Rápida Visual</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="/sales/nueva">
+                        <div class="sidebar-icon-box icon-box-amber">
+                            <i class="fa-solid fa-barcode"></i>
+                        </div>
+                        <span>Caja Terminal / POS</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="/sales/catalogo">
+                        <div class="sidebar-icon-box icon-box-purple">
+                            <i class="fa-solid fa-book-open"></i>
+                        </div>
+                        <span>Catálogo Rápido</span>
+                    </a>
+
+                    <div class="sidebar-group-title">Gestión Operativa</div>
+                    <a class="sidebar-card-btn" href="/clientes">
+                        <div class="sidebar-icon-box icon-box-teal">
+                            <i class="fa-solid fa-users-line"></i>
+                        </div>
+                        <span>Clientes y Locales</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="/admin/maneos">
+                        <div class="sidebar-icon-box icon-box-pink">
+                            <i class="fa-solid fa-handshake"></i>
+                        </div>
+                        <span>Maneos Vecinos</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="/gastos">
+                        <div class="sidebar-icon-box icon-box-rose">
+                            <i class="fa-solid fa-money-bill-transfer"></i>
+                        </div>
+                        <span>Gastos</span>
+                    </a>
+
+                    <div class="sidebar-group-title">Cierre de Caja</div>
+                    <a class="sidebar-card-btn sidebar-card-arqueo" href="/admin/arqueo">
+                        <div class="sidebar-icon-box icon-box-gold">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div>
+                            <div>Arqueo de Caja</div>
+                            <small class="text-muted fw-normal" style="font-size: 0.75rem;">Cuadre y cierre diario</small>
+                        </div>
+                    </a>
+
+                {% elif current_user.rol == 'bodega' or current_user.rol == 'vendedor_bodega' %}
+                    <!-- SECCIÓN BODEGA -->
+                    <div class="sidebar-group-title">Módulo Bodega</div>
+                    <a class="sidebar-card-btn" href="{{ url_for('bodega_bp.dashboard') }}">
+                        <div class="sidebar-icon-box icon-box-purple">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <span>Panel Bodega</span>
+                    </a>
+                    {% if current_user.rol == 'bodega' %}
+                    <a class="sidebar-card-btn" href="{{ url_for('inventory_bp.index') }}">
+                        <div class="sidebar-icon-box icon-box-teal">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <span>Mi Inventario</span>
+                    </a>
+                    {% endif %}
+                    <a class="sidebar-card-btn" href="{{ url_for('bodega_bp.clientes') }}">
+                        <div class="sidebar-icon-box icon-box-blue">
+                            <i class="fa-solid fa-address-book"></i>
+                        </div>
+                        <span>Directorio Clientes</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="{{ url_for('bodega_bp.caja_rapida') }}">
+                        <div class="sidebar-icon-box icon-box-amber">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <span>Caja Rápida (POS)</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="{{ url_for('bodega_bp.nueva_factura') }}">
+                        <div class="sidebar-icon-box icon-box-rose">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <span>Factura Manual</span>
+                    </a>
+                    <a class="sidebar-card-btn" href="{{ url_for('bodega_bp.modulo_abonos') }}">
+                        <div class="sidebar-icon-box icon-box-emerald">
+                            <i class="fa-solid fa-money-bill-transfer"></i>
+                        </div>
+                        <span>Módulo Abonos</span>
+                    </a>
                 {% endif %}
             </div>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column p-0">
-            <ul class="navbar-nav w-100 mb-auto px-3 py-3 gap-2">
-                {% if current_user.rol == 'admin' %}
-                    <!-- Enlaces Únicos para el Administrador de la Tienda -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/admin/dashboard"><i class="fa-solid fa-chart-pie text-primary me-2" style="width:20px; text-align:center;"></i> Dashboard</a>
-                    </li>
-                    <!-- Módulo Inventario -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseInventario" role="button" aria-expanded="false" aria-controls="collapseInventario">
-                            <span><i class="fa-solid fa-box text-success me-2" style="width:20px; text-align:center;"></i> Módulo Inventario</span>
-                            <i class="fa-solid fa-chevron-down small text-muted"></i>
-                        </a>
-                        <div class="collapse" id="collapseInventario">
-                            <ul class="nav flex-column ms-3 mt-1 mb-2 gap-1 border-start ps-2">
-                                <li class="nav-item">
-                                    <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold small" href="/inventory"><i class="fa-solid fa-box-open text-success me-2" style="width:20px; text-align:center;"></i> Inventario Tienda</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold small" href="/sales/catalogo"><i class="fa-solid fa-book-open text-brand-pink me-2" style="width:20px; text-align:center;"></i> Catálogo Físico</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    <!-- Módulo Caja -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseCaja" role="button" aria-expanded="false" aria-controls="collapseCaja">
-                            <span><i class="fa-solid fa-cash-register text-warning me-2" style="width:20px; text-align:center;"></i> Módulo Caja</span>
-                            <i class="fa-solid fa-chevron-down small text-muted"></i>
-                        </a>
-                        <div class="collapse" id="collapseCaja">
-                            <ul class="nav flex-column ms-3 mt-1 mb-2 gap-1 border-start ps-2">
-                                <li class="nav-item">
-                                    <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold small" href="/sales/nueva"><i class="fa-solid fa-cash-register text-warning me-2" style="width:20px; text-align:center;"></i> Caja Terminal</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold small" href="/sales/caja_visual"><i class="fa-solid fa-store text-brand-blue me-2" style="width:20px; text-align:center;"></i> Caja Rápida Visual</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/admin/vendedores"><i class="fa-solid fa-users text-info me-2" style="width:20px; text-align:center;"></i> Personal</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/proveedores"><i class="fa-solid fa-truck-field text-secondary me-2" style="width:20px; text-align:center;"></i> Proveedores</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/gastos"><i class="fa-solid fa-money-bill-transfer text-danger me-2" style="width:20px; text-align:center;"></i> Gastos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/clientes"><i class="fa-solid fa-users-line text-warning me-2" style="width:20px; text-align:center;"></i> Clientes y Locales</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/admin/maneos"><i class="fa-solid fa-handshake text-primary me-2" style="width:20px; text-align:center;"></i> Maneos</a>
-                    </li>
-                    <li class="nav-item mt-2">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-bold bg-light border" href="/admin/arqueo"><i class="fa-solid fa-calculator text-brand-blue me-2" style="width:20px; text-align:center;"></i> Arqueo de Caja</a>
-                    </li>
-                {% elif current_user.rol == 'vendedor' %}
-                    <!-- Vistas Estrictamente Operativas (Cajeros) -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/sales/catalogo"><i class="fa-solid fa-book-open text-muted me-2" style="width:20px; text-align:center;"></i> Catálogo Rápido</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/sales/nueva"><i class="fa-solid fa-cash-register text-brand-pink me-2" style="width:20px; text-align:center;"></i> Módulo de Caja</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/sales/caja_visual"><i class="fa-solid fa-store text-brand-blue me-2" style="width:20px; text-align:center;"></i> Caja Rápida Visual</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/sales/ventas_hoy"><i class="fa-solid fa-list-check me-2" style="color: var(--brand-blue); width:20px; text-align:center;"></i> Ventas del Día</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/clientes"><i class="fa-solid fa-users-line text-warning me-2" style="width:20px; text-align:center;"></i> Clientes y Locales</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/admin/maneos"><i class="fa-solid fa-handshake text-muted me-2" style="width:20px; text-align:center;"></i> Maneos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="/gastos"><i class="fa-solid fa-money-bill-transfer text-success me-2" style="width:20px; text-align:center;"></i> Gastos</a>
-                    </li>
-                    <li class="nav-item mt-2">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-bold bg-light border" href="/admin/arqueo"><i class="fa-solid fa-calculator text-brand-blue me-2" style="width:20px; text-align:center;"></i> Arqueo de Caja</a>
-                    </li>
-                {% elif current_user.rol == 'bodega' %}
-                    <!-- Vistas Exclusivas para el Encargado de Bodega -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.dashboard') }}"><i class="fa-solid fa-boxes-stacked text-brand-blue me-2" style="width:20px; text-align:center;"></i> Bodega</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('inventory_bp.index') }}"><i class="fa-solid fa-box text-brand-pink me-2" style="width:20px; text-align:center;"></i> Mi Inventario (Bodega)</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.clientes') }}"><i class="fa-solid fa-address-book text-muted me-2" style="width:20px; text-align:center;"></i> Directorio Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.nuevo_cliente') }}"><i class="fa-solid fa-user-plus text-muted me-2" style="width:20px; text-align:center;"></i> Registrar Cliente</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.caja_rapida') }}"><i class="fa-solid fa-store text-brand-pink me-2" style="width:20px; text-align:center;"></i> Caja Rápida (POS)</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.nueva_factura') }}"><i class="fa-solid fa-file-invoice text-muted me-2" style="width:20px; text-align:center;"></i> Factura Manual</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-bold border-bottom" href="{{ url_for('bodega_bp.modulo_abonos') }}"><i class="fa-solid fa-money-bill-transfer text-success me-2" style="width:20px; text-align:center;"></i> Módulo Abonos</a>
-                    </li>
-                {% elif current_user.rol == 'vendedor_bodega' %}
-                    <!-- Vistas para el Vendedor de Bodega (Sin Inventario) -->
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.dashboard') }}"><i class="fa-solid fa-house-chimney text-brand-blue me-2" style="width:20px; text-align:center;"></i> Mi Panel</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.clientes') }}"><i class="fa-solid fa-address-book text-muted me-2" style="width:20px; text-align:center;"></i> Mis Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.nuevo_cliente') }}"><i class="fa-solid fa-user-plus text-muted me-2" style="width:20px; text-align:center;"></i> Crear Cliente</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.caja_rapida') }}"><i class="fa-solid fa-store text-brand-pink me-2" style="width:20px; text-align:center;"></i> Caja Rápida (POS)</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-semibold border-bottom" href="{{ url_for('bodega_bp.nueva_factura') }}"><i class="fa-solid fa-file-invoice text-muted me-2" style="width:20px; text-align:center;"></i> Factura Manual</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-brand-black rounded-3 px-3 py-2 fw-bold border-bottom" href="{{ url_for('bodega_bp.modulo_abonos') }}"><i class="fa-solid fa-money-bill-transfer text-success me-2" style="width:20px; text-align:center;"></i> Registrar Abono</a>
-                    </li>
-                {% endif %}
-            </ul>
             
-            <!-- Interfaz de Desconexión / Fin de Turno al final del sidebar -->
-            <div class="px-3 pb-4 mt-auto">
-                <a class="btn btn-outline-danger w-100 rounded-pill fw-bold" href="{{ url_for('auth_bp.logout') }}">
-                    <i class="fa-solid fa-sign-out-alt me-2"></i> Salir del Sistema
+            <!-- Acciones al pie del Sidebar (PWA & Cerrar Sesión) -->
+            <div class="pt-3 border-top mt-3 d-flex flex-column gap-2">
+                <button type="button" class="btn-sidebar-pwa w-100" id="btnInstallPwa" onclick="if(window.deferredPrompt){window.deferredPrompt.prompt();}">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <span>Instalar App PWA</span>
+                </button>
+                <a class="btn btn-outline-danger w-100 rounded-pill fw-bold py-2" href="{{ url_for('auth_bp.logout') }}">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Cerrar Sesión
                 </a>
             </div>
         </div>

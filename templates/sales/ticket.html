@@ -3,229 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket de Compra #{{ venta.id }} - KOBA</title>
-    <!-- Incluir solo la fuente base "Roboto Mono" (Letra de ticketera 80mm) -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Factura / Ticket #{{ venta.id }} - KOBA</title>
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
         body {
-            background-color: #3d434a; /* Fondo sobrio simulando el escritorio */
+            background-color: #f1f5f9;
             margin: 0;
-            padding: 20px 12px 40px;
+            padding: 24px 12px 50px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            font-family: 'Roboto Mono', monospace, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             box-sizing: border-box;
+            color: #0f172a;
         }
 
-        .nav-container {
+        .ticket-wrapper {
             width: 100%;
-            max-width: 400px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .ticket {
-            background-color: #FFFFFF;
-            width: 100%;
-            max-width: 400px; /* Ancho estándar de impresora térmica 80mm */
-            padding: 24px 18px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            color: #1A1A1A;
+            max-width: 420px;
+            background-color: #ffffff;
+            border-radius: 24px;
+            padding: 28px 24px;
+            box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e2e8f0;
             box-sizing: border-box;
-            border-radius: 8px;
         }
 
         .header {
             text-align: center;
-            border-bottom: 2px dashed #1A1A1A;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .logo {
-            font-size: 2.1rem;
-            font-weight: 700;
-            margin: 0 0 8px 0;
-            letter-spacing: -1px;
-            word-break: break-word;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.35rem;
+            font-weight: 900;
+            margin: 0 0 2px 0;
+            letter-spacing: -0.04em;
+            color: #0f172a;
         }
 
-        .info {
+        .subtitle {
+            color: #b45309;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin: 0 0 16px 0;
+        }
+
+        .meta-info {
             font-size: 0.88rem;
+            color: #334155;
             margin: 4px 0;
             line-height: 1.4;
-            word-break: break-word;
+            font-weight: 600;
+        }
+
+        .dashed-line {
+            border-top: 2px dashed #f59e0b;
+            margin: 16px 0;
         }
 
         .table-items {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.85rem;
-            margin-bottom: 20px;
+            font-size: 0.9rem;
+            margin: 14px 0;
         }
 
         .table-items th {
-            text-align: left;
-            border-bottom: 1px solid #1A1A1A;
-            padding-bottom: 8px;
-            font-weight: 700;
+            color: #92400e;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 6px 0 10px 0;
+            border-bottom: 1.5px solid #e2e8f0;
         }
 
         .table-items td {
-            padding: 8px 0;
+            padding: 10px 0;
             vertical-align: top;
+            font-weight: 600;
+            color: #1e293b;
         }
 
-        .col-qty { width: 15%; text-align: center; }
+        .col-qty { width: 15%; text-align: center; font-weight: 800; }
         .col-prod { width: 55%; padding-right: 8px; word-break: break-word; }
-        .col-sub { width: 30%; text-align: right; }
+        .col-sub { width: 30%; text-align: right; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 0.98rem; }
 
-        .totals {
-            border-top: 2px dashed #1A1A1A;
-            padding-top: 18px;
-            margin-bottom: 20px;
-        }
-
-        .total-row {
+        /* Banner Total (Estilo Foto 5) */
+        .total-banner {
+            background: linear-gradient(135deg, #fef08a 0%, #fcd34d 100%);
+            color: #0f172a;
+            border-radius: 14px;
+            padding: 14px 18px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            margin: 18px 0;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);
+        }
+
+        .total-banner-label {
+            font-family: 'Outfit', sans-serif;
             font-size: 1.35rem;
-            font-weight: 700;
-            background-color: #008B8B; /* Teal Koba */
-            color: #FFFFFF;
-            padding: 12px 14px;
-            border-radius: 6px;
-            border: 1px solid #1A1A1A;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        .total-banner-amount {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
         }
 
         .footer {
             text-align: center;
             font-size: 0.82rem;
-            margin-top: 25px;
-            color: #333;
+            margin-top: 20px;
+            color: #475569;
         }
 
+        .footer-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        /* Botones de Acción (Estilo Foto 5) */
         .actions-group {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: 25px;
+            margin-top: 24px;
             width: 100%;
         }
 
-        .btn-action {
+        .btn-action-dark {
+            background-color: #0f172a;
+            color: #ffffff;
+            border: 1px solid #0f172a;
+            border-radius: 12px;
+            min-height: 48px;
+            padding: 12px 16px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            width: 100%;
-            min-height: 48px; /* Táctil óptimo para dedo en móviles y tablets */
-            padding: 12px 16px;
-            font-size: 0.95rem;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            font-family: inherit;
             transition: all 0.2s ease;
-            box-sizing: border-box;
-            border: 2px solid transparent;
-            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .btn-action-dark:hover {
+            background-color: #1e293b;
+            transform: translateY(-2px);
         }
 
-        .btn-print {
-            background-color: #008B8B; /* Teal Koba */
-            color: #FFFFFF;
-            border-color: #008B8B;
-        }
-
-        .btn-print:hover, .btn-print:active {
-            background-color: #006b6b;
-            border-color: #006b6b;
-            color: #FFFFFF;
-        }
-
-        .btn-back {
-            background-color: #1a1e21;
-            color: #FFFFFF;
-            border-color: #1a1e21;
-        }
-
-        .btn-back:hover, .btn-back:active {
-            background-color: #2c3237;
-            border-color: #2c3237;
-            color: #FFFFFF;
-        }
-
-        .btn-back-top {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: #FFFFFF;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 6px;
-            padding: 8px 14px;
-            font-size: 0.85rem;
-            font-weight: 700;
+        .btn-action-gold {
+            background: linear-gradient(135deg, #fef08a 0%, #fcd34d 100%);
+            color: #78350f;
+            border: 1px solid #fde047;
+            border-radius: 12px;
+            min-height: 48px;
+            padding: 12px 16px;
+            font-size: 0.92rem;
+            font-weight: 900;
             cursor: pointer;
-            font-family: inherit;
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            transition: 0.2s;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);
+        }
+        .btn-action-gold:hover {
+            background: #fde047;
+            transform: translateY(-2px);
         }
 
-        .btn-back-top:hover {
-            background-color: rgba(255, 255, 255, 0.25);
-        }
-
-        /* MEDIA QUERY PARA DISPOSITIVOS PEQUEÑOS (Teléfonos < 480px) */
-        @media (max-width: 480px) {
-            body { padding: 12px 8px 30px; }
-            .ticket { padding: 18px 12px; border-radius: 6px; }
-            .logo { font-size: 1.8rem; }
-            .total-row { font-size: 1.2rem; padding: 10px 12px; }
-            .btn-action { min-height: 50px; font-size: 0.95rem; }
-        }
-
-        /* MEDIA QUERY DE IMPRESIÓN: Omite UI innecesaria al imprimir en papel */
+        /* MEDIA QUERY DE IMPRESIÓN */
         @media print {
             body { background-color: #FFFFFF !important; padding: 0 !important; display: block !important; }
-            .ticket { box-shadow: none !important; max-width: 100% !important; padding: 0 !important; margin: 0 auto !important; width: 80mm !important; border: none !important; border-radius: 0 !important; }
-            .no-print, .nav-container, .actions-group, .btn-action, .btn-print, .btn-back, .btn-back-top { display: none !important; }
-            .total-row { background-color: transparent !important; border: none !important; padding: 10px 0 !important; }
-            .total-row * { color: #1A1A1A !important; }
+            .ticket-wrapper { box-shadow: none !important; max-width: 100% !important; padding: 0 !important; margin: 0 auto !important; width: 80mm !important; border: none !important; border-radius: 0 !important; }
+            .no-print, .actions-group, .btn-action-dark, .btn-action-gold { display: none !important; }
+            .total-banner { background: transparent !important; border: 1px solid #1a1a1a !important; box-shadow: none !important; }
+            .total-banner * { color: #1A1A1A !important; }
+            .dashed-line { border-top: 2px dashed #333 !important; }
         }
     </style>
 </head>
 <body>
 
-<!-- Barra de navegación rápida superior (visible en teléfono, tablet y PC) -->
-<div class="nav-container no-print">
-    <button type="button" class="btn-back-top" onclick="volverACaja()">
-        ⬅ Volver a la Caja
-    </button>
-</div>
-
-<div class="ticket">
+<div class="ticket-wrapper">
+    <!-- Header Ticket (Estilo Foto 5) -->
     <div class="header">
         <h1 class="logo">KOBA</h1>
-        <p class="info">Folio / Ticket: #{{ venta.id }}</p>
-        <p class="info">Expedido: {{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</p>
-        <p class="info">Cajero Asignado: {{ venta.vendedor.nombre }}</p>
-        <p class="info" style="font-weight: bold; text-transform: uppercase;">
+        <div class="subtitle">KOBA - ACCESORIOS & TECNOLOGÍA</div>
+        
+        <div class="meta-info">Folio / Ticket: #{{ venta.id }}</div>
+        <div class="meta-info">Expedido: {{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</div>
+        <div class="meta-info">Cajero Asignado: {{ venta.vendedor.nombre if venta.vendedor else 'Cajero' }}</div>
+        <div class="meta-info" style="font-weight: 800; text-transform: uppercase;">
             {% if venta.pagos|length > 1 %}
-                Método de Pago: PAGO DIVIDIDO
+                MÉTODO DE PAGO: PAGO DIVIDIDO
             {% elif venta.pagos|length == 1 %}
-                Método de Pago: {{ venta.pagos[0].metodo_pago|upper }}
+                MÉTODO DE PAGO: {{ venta.pagos[0].metodo_pago|upper }}
             {% else %}
-                Método de Pago: {{ venta.metodo_pago|upper }}
+                MÉTODO DE PAGO: {{ venta.metodo_pago|upper }}
             {% endif %}
-        </p>
+        </div>
     </div>
 
+    <!-- Línea punteada dorada -->
+    <div class="dashed-line"></div>
+
+    <!-- Tabla de Ítems -->
     <table class="table-items">
         <thead>
             <tr>
@@ -240,11 +249,11 @@
                 <td class="col-qty">{{ detalle.cantidad_vendida }}</td>
                 <td class="col-prod">
                     {% if detalle.nombre_manual %}
-                        {{ detalle.nombre_manual[:40] }}{% if detalle.nombre_manual|length > 40 %}...{% endif %}
+                        {{ detalle.nombre_manual }}
                     {% else %}
-                        {{ detalle.producto.nombre[:40] }}{% if detalle.producto.nombre|length > 40 %}...{% endif %}
+                        {{ detalle.producto.nombre }}
                         {% if detalle.variante %}
-                            <br><small style="font-size: 0.75rem;">{{ detalle.variante.nombre_variante }}</small>
+                            <br><small style="font-size: 0.75rem; color: #64748b;">{{ detalle.variante.nombre_variante }}</small>
                         {% endif %}
                     {% endif %}
                 </td>
@@ -260,69 +269,66 @@
         </tbody>
     </table>
 
-    <div class="totals">
-        <div class="total-row">
-            <span>TOTAL:</span>
-            <span>${{ (venta.monto_total)|cop }}</span>
-        </div>
-        
-        {% if venta.pagos|length > 1 %}
-        <!-- Desglose de pagos mixtos -->
-        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc;">
-            <p style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; text-align: center;">DESGLOSE DE PAGOS:</p>
-            {% for pago in venta.pagos %}
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0;">
-                <span style="text-transform: capitalize;">{{ pago.metodo_pago }}:</span>
-                <span style="font-weight: 700;">${{ (pago.monto)|cop }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+    <!-- Línea punteada dorada -->
+    <div class="dashed-line"></div>
+
+    <!-- Banner Destacado Total -->
+    <div class="total-banner">
+        <span class="total-banner-label">TOTAL:</span>
+        <span class="total-banner-amount">${{ (venta.monto_total)|cop }}</span>
     </div>
 
+    {% if venta.pagos|length > 1 %}
+    <!-- Desglose de Pagos Mixtos -->
+    <div style="margin: 12px 0; padding: 8px 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+        <div style="font-weight: 800; font-size: 0.78rem; text-transform: uppercase; color: #64748b; margin-bottom: 6px; text-align: center;">Desglose de Pagos:</div>
+        {% for pago in venta.pagos %}
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; padding: 2px 0;">
+            <span style="text-transform: capitalize; font-weight: 600;">{{ pago.metodo_pago }}:</span>
+            <span style="font-weight: 800; font-family: 'Outfit', sans-serif;">${{ (pago.monto)|cop }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Footer de Políticas -->
     <div class="footer">
-        <p style="font-size: 1rem; font-weight: bold; margin-bottom: 5px;">¡Gracias por tu compra!</p>
+        <div class="footer-title">¡Gracias por tu compra!</div>
         <p style="margin: 4px 0;">Políticas de Tienda: Devoluciones únicamente presentando ticket impreso o digital.</p>
         <p style="margin: 4px 0;">Soporte: ventas@koba.com</p>
     </div>
 
-    <!-- Botones de Acción: Volver y Re-imprimir -->
+    <!-- Botones de Acción (Estilo Foto 5) -->
     <div class="actions-group no-print">
-        <button type="button" class="btn-action btn-back" onclick="volverACaja()">
-            ⬅ Volver a la Caja
+        <button type="button" class="btn-action-dark" onclick="volverACaja()">
+            <i class="fa-solid fa-arrow-left"></i> Volver a Caja / Registrar Venta
         </button>
-        <button type="button" class="btn-action btn-print" onclick="window.print()">
-            🖨️ [ IMPRIMIR TICKET ]
+        <button type="button" class="btn-action-gold" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> [ Imprimir Ticket ]
         </button>
     </div>
 </div>
 
-<!-- Lógica de Auto-Impresión Reactiva y Navegación Inteligente -->
 <script>
-    // Función para volver a la caja de forma segura en cualquier dispositivo
+    // Función para volver a la caja de forma segura
     function volverACaja() {
-        // 1. Si se abrió en una pestaña secundaria o pop-up mediante window.open
         if (window.opener && !window.opener.closed) {
             try {
                 window.opener.focus();
                 window.close();
                 return;
-            } catch (e) {
-                // Si el navegador bloquea window.close()
-            }
+            } catch (e) {}
         }
 
-        // 2. Si vino referido de una de las cajas de venta
         if (document.referrer && (document.referrer.includes('/sales/nueva') || document.referrer.includes('/sales/caja_visual'))) {
             window.location.href = document.referrer;
             return;
         }
 
-        // 3. Fallback directo a la Caja Central de ventas
         window.location.href = "{{ url_for('sales_bp.procesar_venta') }}";
     }
 
-    // Evento silencioso que detona el pop-up de impresora nativo al renderizar
+    // Auto-impresión silenciosa al cargar
     window.onload = function() {
         setTimeout(() => {
             window.print();

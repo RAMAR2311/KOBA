@@ -1,11 +1,27 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-brand-black m-0">Consignaciones y Maneos</h2>
-    <a href="{{ url_for('admin_bp.dashboard') if current_user.rol == 'admin' else url_for('sales_bp.procesar_venta') }}" class="btn btn-outline-secondary rounded-pill px-4">
-        <i class="fa-solid fa-arrow-left me-1"></i> Volver al Menú
-    </a>
+<!-- Cabecera del Módulo -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold text-brand-black m-0 d-flex align-items-center gap-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-3 p-2 text-white" style="background: linear-gradient(135deg, var(--brand-primary) 0%, #006666 100%); width: 42px; height: 42px;">
+                <i class="fa-solid fa-handshake fs-5"></i>
+            </div>
+            <span>Consignaciones y Maneos</span>
+        </h2>
+        <p class="text-muted small m-0 mt-1">Control de mercancía prestada a locales vecinos, cobros y devoluciones a inventario.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('clientes_bp.index') }}" class="btn btn-outline-secondary rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <i class="fa-solid fa-users-line text-brand-primary"></i>
+            <span>Directorio Clientes</span>
+        </a>
+        <a href="{{ url_for('admin_bp.dashboard') if current_user.rol == 'admin' else url_for('sales_bp.procesar_venta') }}" class="btn btn-light border rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Volver al Menú</span>
+        </a>
+    </div>
 </div>
 
 <style>
@@ -15,36 +31,39 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background-color: #fff9e6;
-        border: 1.5px solid #ffe58f;
-        border-radius: 8px;
-        color: #faad14;
+        background-color: var(--brand-primary-light);
+        border: 1.5px solid #99e6e6;
+        border-radius: 10px;
+        color: var(--brand-primary);
         font-size: 16px;
         cursor: pointer;
         transition: all 0.2s ease;
     }
     .btn-add-row:hover {
-        background-color: #fff1b8;
-        border-color: #ffd666;
-        color: #d48806;
-        transform: scale(1.05);
+        background-color: var(--brand-primary);
+        border-color: var(--brand-primary);
+        color: #ffffff;
+        transform: scale(1.08);
+        box-shadow: 0 4px 10px rgba(0, 139, 139, 0.25);
     }
     .btn-registrar-maneo {
-        background-color: #1f2937;
+        background: linear-gradient(135deg, #0f172a 0%, #004d4d 100%);
         color: #20c997;
-        font-weight: 600;
-        border: none;
+        font-weight: 700;
+        border: 1px solid var(--brand-primary);
         border-radius: 50rem;
         padding: 0.65rem 1.8rem;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
         transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
     }
     .btn-registrar-maneo:hover {
-        background-color: #111827;
-        color: #26e7af;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #004d4d;
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 139, 139, 0.3);
     }
     .btn-del-row {
         width: 28px;
@@ -52,7 +71,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: #9ca3af;
+        color: #94a3b8;
         background: transparent;
         border: none;
         border-radius: 6px;
@@ -65,14 +84,33 @@
     .valor-preview-badge {
         font-size: 0.75rem;
         color: #10b981;
-        font-weight: 600;
+        font-weight: 700;
         min-height: 1rem;
+    }
+    .maneo-input-custom {
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+    .maneo-input-custom:focus {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(0, 139, 139, 0.15);
+        background-color: #ffffff !important;
     }
 </style>
 
 <!-- Formulario para Nuevo Maneo -->
-<div class="card card-custom p-4 mb-4">
-    <h5 class="text-brand-black fw-bold mb-3"><i class="fa-solid fa-box-open text-brand-blue me-2"></i>Registrar Nuevo Maneo</h5>
+<div class="card card-custom p-4 mb-4 border-0 shadow-sm bg-white" style="border-top: 4px solid var(--brand-primary) !important;">
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-box-open text-brand-primary fs-5"></i>
+            <h5 class="text-brand-black fw-bold m-0">Registrar Nuevo Maneo</h5>
+        </div>
+        <span class="badge bg-light text-secondary border px-3 py-1 rounded-pill small">
+            <i class="fa-solid fa-bolt text-warning me-1"></i> Entrega Rápida
+        </span>
+    </div>
+
     <form method="POST" action="{{ url_for('admin_bp.maneos_prestar') }}" id="formNuevoManeo">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
@@ -88,14 +126,14 @@
                 <!-- Encabezados de Columnas -->
                 <div class="row g-2 mb-2">
                     <div class="col-2">
-                        <label class="form-label fw-bold text-brand-black mb-0">Cantidad</label>
+                        <label class="form-label fw-bold text-brand-black small mb-0">Cantidad</label>
                     </div>
                     <div class="col-3">
-                        <label class="form-label fw-bold text-brand-black mb-0">Valor (Und)</label>
+                        <label class="form-label fw-bold text-brand-black small mb-0">Valor (Und)</label>
                         <small class="text-success d-block fw-semibold" style="font-size: 0.7rem; line-height: 1.1;">(Ej: 5 = $5.000 | 15 = $15.000)</small>
                     </div>
                     <div class="col-7">
-                        <label class="form-label fw-bold text-brand-black mb-0">Producto a Prestar / Entregar (SKU)</label>
+                        <label class="form-label fw-bold text-brand-black small mb-0">Producto a Prestar / Entregar (SKU)</label>
                     </div>
                 </div>
 
@@ -104,15 +142,15 @@
                     <!-- Fila 1 -->
                     <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="0">
                         <div class="col-2">
-                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input maneo-input-custom" min="1" placeholder="1">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input maneo-input-custom" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
                             <div class="d-flex align-items-center gap-1">
-                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input maneo-input-custom" placeholder="Escribe el nombre o escanea el SKU...">
                                 <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
@@ -130,15 +168,15 @@
                     <!-- Fila 2 -->
                     <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="1">
                         <div class="col-2">
-                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input maneo-input-custom" min="1" placeholder="1">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input maneo-input-custom" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
                             <div class="d-flex align-items-center gap-1">
-                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input maneo-input-custom" placeholder="Escribe el nombre o escanea el SKU...">
                                 <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
@@ -156,15 +194,15 @@
                     <!-- Fila 3 -->
                     <div class="row g-2 align-items-start mb-2 fila-maneo" data-row-idx="2">
                         <div class="col-2">
-                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                            <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input maneo-input-custom" min="1" placeholder="1">
                         </div>
                         <div class="col-3">
-                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
+                            <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input maneo-input-custom" placeholder="Ej: 5, 10, 15">
                             <div class="valor-preview-badge mt-1 ps-1"></div>
                         </div>
                         <div class="col-7">
                             <div class="d-flex align-items-center gap-1">
-                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                                <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input maneo-input-custom" placeholder="Escribe el nombre o escanea el SKU...">
                                 <button type="button" class="btn-del-row d-none" title="Eliminar fila" tabindex="-1">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
@@ -192,7 +230,7 @@
             <div class="col-lg-3 col-md-4 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label fw-bold text-brand-black mb-0">Local Vecino / Cliente</label>
+                        <label class="form-label fw-bold text-brand-black small mb-0">Local Vecino / Cliente</label>
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 fw-bold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#modalCrearClienteRapido">
                             <i class="fa-solid fa-plus me-1"></i> Nuevo Local
                         </button>
@@ -200,13 +238,13 @@
 
                     <!-- Buscador Inteligente de Locales / Clientes -->
                     <div class="position-relative" id="comboboxClienteWrapper">
-                        <div class="input-group shadow-sm">
+                        <div class="input-group shadow-sm" style="border-radius: 12px; overflow: hidden;">
                             <span class="input-group-text bg-light border-0 text-muted ps-3">
-                                <i class="fa-solid fa-magnifying-glass text-primary" id="iconBuscarCliente"></i>
+                                <i class="fa-solid fa-magnifying-glass text-brand-primary" id="iconBuscarCliente"></i>
                             </span>
                             <input type="text" 
                                    id="inputBuscarCliente" 
-                                   class="form-control bg-light border-0 fw-semibold text-brand-black py-2" 
+                                   class="form-control bg-light border-0 fw-semibold text-brand-black py-2 shadow-none" 
                                    placeholder="Escribe o busca un local..." 
                                    autocomplete="off"
                                    required>
@@ -222,7 +260,7 @@
                         <input type="hidden" name="cliente_id" id="cliente_id_hidden" value="{{ selected_cliente_id or '' }}">
                         <input type="hidden" name="local_vecino" id="local_vecino_hidden" value="">
 
-                        <!-- Menú desplegable con filtrado inteligente (Prioridad al inicio de palabra/local) -->
+                        <!-- Menú desplegable con filtrado inteligente -->
                         <div id="dropdownClientesList" 
                              class="dropdown-menu shadow-lg border-0 rounded-3 w-100 p-1 mt-1 position-absolute" 
                              style="max-height: 280px; overflow-y: auto; z-index: 1050; display: none;">
@@ -230,19 +268,19 @@
                     </div>
 
                     <div class="mt-2 d-flex justify-content-between align-items-center">
-                        <a href="{{ url_for('clientes_bp.index') }}" class="small text-brand-blue text-decoration-none fw-semibold">
+                        <a href="{{ url_for('clientes_bp.index') }}" class="small text-brand-primary text-decoration-none fw-bold">
                             <i class="fa-solid fa-users-line me-1"></i> Ver Directorio Completo
                         </a>
                     </div>
                     <div class="mt-3">
                         <label class="form-label fw-bold text-brand-black small mb-1">
-                            <i class="fa-regular fa-comment-dots text-primary me-1"></i> Observación del Maneo (Opcional)
+                            <i class="fa-regular fa-comment-dots text-brand-primary me-1"></i> Observación del Maneo (Opcional)
                         </label>
-                        <textarea name="observacion_general" class="form-control form-control-sm bg-light border-0 text-muted" rows="3" placeholder="Nota, acuerdo o detalles generales de este maneo..."></textarea>
+                        <textarea name="observacion_general" class="form-control bg-light border-0 text-muted p-2" style="border-radius: 10px; font-size: 0.85rem;" rows="3" placeholder="Nota, acuerdo o detalles generales de este maneo..."></textarea>
                     </div>
                 </div>
                 <div class="text-end mt-4 mt-md-auto pt-3">
-                    <button type="submit" class="btn btn-registrar-maneo shadow-sm w-100 justify-content-center">
+                    <button type="submit" class="btn btn-registrar-maneo shadow w-100 justify-content-center">
                         <i class="fa-solid fa-paper-plane me-1"></i> Registrar Maneo
                     </button>
                 </div>
@@ -252,98 +290,117 @@
 </div>
 
 <!-- Lista de Maneos -->
-<div class="card card-custom p-0 overflow-hidden">
+<div class="card card-custom p-0 overflow-hidden border-0 shadow-sm bg-white">
     <div class="table-responsive">
-        <table class="table table-hover table-custom mb-0">
+        <table class="table table-hover table-custom mb-0 align-middle">
             <thead class="bg-light">
                 <tr>
-                    <th class="ps-4 text-center">CANTIDAD</th>
-                    <th class="text-center">VALOR</th>
+                    <th class="ps-4 text-center" width="110">CANTIDAD</th>
+                    <th class="text-center" width="140">VALOR</th>
                     <th>LOCAL VECINO</th>
                     <th>PRODUCTO (SKU)</th>
-                    <th class="text-center">OBSERVACIÓN</th>
-                    <th class="text-center">ESTADO</th>
-                    <th class="text-center">ACCIONES RÁPIDAS</th>
+                    <th class="text-center" width="160">OBSERVACIÓN</th>
+                    <th class="text-center" width="130">ESTADO</th>
+                    <th class="text-center pe-4" width="210">ACCIONES RÁPIDAS</th>
                 </tr>
             </thead>
             <tbody>
                 {% for m in maneos %}
                 <tr>
                     <td class="ps-4 text-center">
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 fs-6 fw-bold">
+                        <span class="badge rounded-pill px-3 py-2 fs-6 fw-bold" style="background-color: var(--brand-primary-light); color: var(--brand-primary); border: 1px solid #99e6e6;">
                             {{ m.cantidad }} uds
                         </span>
                     </td>
-                    <td class="text-center fw-bold text-success">
+                    <td class="text-center fw-bold text-success" style="font-family: 'Outfit', sans-serif;">
                         {% set precio_unit = (m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else (m.variante.precio_sugerido if m.variante else m.producto.precio_sugerido) %}
-                        ${{ '{:,.0f}'.format(m.cantidad * precio_unit) }}
+                        <div class="fs-6">${{ '{:,.0f}'.format(m.cantidad * precio_unit) }}</div>
                         {% if m.valor_fijo %}
-                            <br><small class="text-muted fw-normal" style="font-size: 0.75rem;">(${{ '{:,.0f}'.format(precio_unit) }} c/u)</small>
-                        {% endif %}
-                    </td>
-                    <td class="fw-bold text-brand-black">
-                        <i class="fa-solid fa-store text-muted me-2"></i>
-                        {% if m.cliente %}
-                            <a href="{{ url_for('clientes_bp.estado_cuenta', id=m.cliente.id) }}" class="text-brand-black text-decoration-none hover-primary" title="Ver Estado de Cuenta de este local">
-                                {{ m.cliente.nombre_o_razon_social }} <i class="fa-solid fa-file-invoice-dollar text-primary small ms-1"></i>
-                            </a>
-                        {% else %}
-                            {{ m.local_vecino }}
+                            <small class="text-muted fw-normal" style="font-size: 0.72rem;">(${{ '{:,.0f}'.format(precio_unit) }} c/u)</small>
                         {% endif %}
                     </td>
                     <td>
-                        <span class="text-brand-black fw-semibold">{{ m.producto.nombre }}</span> <small class="text-muted">({{ m.producto.sku }})</small>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-3 me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: var(--brand-primary-light); color: var(--brand-primary);">
+                                <i class="fa-solid fa-store" style="font-size: 0.85rem;"></i>
+                            </div>
+                            <div>
+                                {% if m.cliente %}
+                                    <a href="{{ url_for('clientes_bp.estado_cuenta', id=m.cliente.id) }}" class="text-brand-black fw-bold text-decoration-none hover-primary" title="Ver Estado de Cuenta de este local">
+                                        {{ m.cliente.nombre_o_razon_social }} <i class="fa-solid fa-file-invoice-dollar text-primary small ms-1"></i>
+                                    </a>
+                                    {% if m.cliente.local_numero %}
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">Local: {{ m.cliente.local_numero }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-brand-black fw-bold">{{ m.local_vecino }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="text-brand-black fw-bold">{{ m.producto.nombre }}</span>
                         {% if m.variante %}
-                            <br><span class="badge bg-light text-primary border border-primary border-opacity-25 rounded-pill px-2 mt-1" style="font-size: 0.75rem;"><i class="fa-solid fa-layer-group me-1"></i>{{ m.variante.nombre_variante }}</span>
+                            <br><span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill px-2 py-0 mt-1" style="font-size: 0.75rem;"><i class="fa-solid fa-code-branch me-1"></i>{{ m.variante.nombre_variante }}</span>
                         {% endif %}
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">SKU: {{ m.producto.sku }}</small>
                     </td>
                     <td class="text-center">
                         {% if m.observacion %}
-                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Ver o editar nota registrada">
-                                <i class="fa-solid fa-comment-dots text-info me-1"></i> Ver Nota
-                            </button>
-                            <div class="small text-muted text-truncate mx-auto mt-1" style="max-width: 140px; font-size: 0.72rem;" title="{{ m.observacion }}">
-                                {{ m.observacion }}
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-semibold text-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Ver o editar nota registrada">
+                                    <i class="fa-solid fa-comment-dots text-primary me-1"></i> Ver Nota
+                                </button>
+                                <div class="small text-muted text-truncate mx-auto mt-1" style="max-width: 140px; font-size: 0.72rem;" title="{{ m.observacion }}">
+                                    {{ m.observacion }}
+                                </div>
                             </div>
                         {% else %}
-                            <button type="button" class="btn btn-sm btn-light rounded-pill px-2 py-1 text-muted border-0" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Agregar nota a este maneo">
+                            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-muted" data-bs-toggle="modal" data-bs-target="#modalObsManeo{{ m.id }}" title="Agregar nota a este maneo">
                                 <i class="fa-regular fa-comment me-1"></i> + Nota
                             </button>
                         {% endif %}
                     </td>
                     <td class="text-center">
                         {% if m.estado == 'PENDIENTE' %}
-                            <span class="badge bg-warning text-dark border border-warning rounded-pill px-3 py-2">Pendiente</span>
+                            <span class="badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-3 py-1 fw-bold">Pendiente</span>
                         {% elif m.estado == 'FACTURADO' %}
-                            <span class="badge bg-success rounded-pill px-3 py-2">Facturado</span>
-                            <br><small class="text-muted d-block mt-1">{{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-cash-register me-1"></i>Facturado
+                            </span>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">{{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') }}</small>
                         {% elif m.estado == 'DEVUELTO' %}
-                            <span class="badge bg-secondary rounded-pill px-3 py-2">Devuelto</span>
-                            <br><small class="text-muted d-block mt-1">{{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Devuelto
+                            </span>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">{{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') }}</small>
                         {% endif %}
                     </td>
-                    <td class="text-center">
+                    <td class="text-center pe-4">
                         {% if m.estado == 'PENDIENTE' %}
                             <div class="d-flex justify-content-center gap-2">
                                 <!-- Botón Facturar -->
-                                <button type="button" class="btn btn-sm btn-success rounded-pill" data-bs-toggle="modal" data-bs-target="#facturarModal{{ m.id }}" title="Facturar Venta">
+                                <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#facturarModal{{ m.id }}" title="Facturar Venta">
                                     <i class="fa-solid fa-cash-register me-1"></i> Cobrar
                                 </button>
                                 <!-- Botón Devolver -->
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-bs-toggle="modal" data-bs-target="#devolverModal{{ m.id }}" title="Devolver a Inventario">
-                                    <i class="fa-solid fa-rotate-left"></i> Devolver
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#devolverModal{{ m.id }}" title="Devolver a Inventario">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Devolver
                                 </button>
                             </div>
                         {% else %}
-                            <span class="text-muted small"><i class="fa-solid fa-check text-success"></i> Completado</span>
+                            <span class="text-muted small"><i class="fa-solid fa-check text-success me-1"></i> Completado</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
                     <td colspan="7" class="text-center py-5 text-muted">
-                        <i class="fa-solid fa-handshake-slash fs-2 mb-3 text-warning opacity-50"></i>
-                        <p class="mb-0">No hay maneos o préstamos registrados.</p>
+                        <div class="py-4">
+                            <i class="fa-solid fa-handshake-slash fs-2 mb-3 text-warning opacity-50"></i>
+                            <h5 class="fw-bold text-brand-black mb-1">No hay maneos registrados</h5>
+                            <p class="text-muted small mb-0">Usa el formulario superior para prestar o consignar mercancía a tus locales vecinos.</p>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -357,11 +414,18 @@
 <!-- Modal Ver / Editar Observación -->
 <div class="modal fade text-start" id="modalObsManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-bold text-brand-black">
-                    <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Observaciones del Maneo #{{ m.id }}
-                </h5>
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 36px; height: 36px; background-color: var(--brand-primary);">
+                        <i class="fa-solid fa-clipboard-check fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0">
+                            Observaciones del Maneo #{{ m.id }}
+                        </h5>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
@@ -373,7 +437,7 @@
                     </div>
                     <div class="text-end">
                         <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Producto</small>
-                        <span class="fw-bold text-brand-blue">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
+                        <span class="fw-bold text-brand-primary">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
                         {% if m.variante %}
                             <div class="small text-muted">[{{ m.variante.nombre_variante }}]</div>
                         {% endif %}
@@ -384,8 +448,8 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted text-uppercase">Nota Registrada:</label>
                     {% if m.observacion %}
-                        <div class="p-3 rounded-3 border" style="background: #f8fbfd; border-color: #d0e3f0 !important;">
-                            <p class="mb-0 text-brand-black" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
+                        <div class="p-3 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                            <p class="mb-0 text-brand-black fw-medium" style="white-space: pre-wrap; word-break: break-word;">{{ m.observacion }}</p>
                         </div>
                     {% else %}
                         <div class="alert alert-light border py-2 px-3 text-muted rounded-3 mb-0">
@@ -399,11 +463,11 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-brand-black">Modificar o Agregar Nota:</label>
-                        <textarea name="observacion" class="form-control bg-light border-0 shadow-sm" rows="3" placeholder="Escribe aquí las observaciones...">{{ m.observacion or '' }}</textarea>
+                        <textarea name="observacion" class="form-control bg-light border shadow-none p-3" rows="3" placeholder="Escribe aquí las observaciones...">{{ m.observacion or '' }}</textarea>
                     </div>
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
                             <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Nota
                         </button>
                     </div>
@@ -414,41 +478,51 @@
 </div>
 
 {% if m.estado == 'PENDIENTE' %}
-<!-- Modal Facturar -->
+<!-- Modal Facturar / Cobrar Maneo -->
 <div class="modal fade text-start" id="facturarModal{{ m.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form method="POST" action="{{ url_for('admin_bp.maneos_facturar', id=m.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="modal-header border-0 bg-light">
-                    <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-sack-dollar me-2"></i>Facturar Maneo</h5>
+                <div class="modal-header border-0 bg-success bg-opacity-10 py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                            <i class="fa-solid fa-cash-register fs-6"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-brand-black mb-0">
+                                Cobrar Maneo
+                            </h5>
+                            <small class="text-muted">Liquidación directa a caja</small>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p>Registrarás la venta del producto <strong>{{ m.producto.nombre }}</strong>
+                    <p class="text-brand-black mb-3">Registrarás la venta de <strong class="text-brand-black">{{ m.producto.nombre }}</strong>
                         {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1">{{ m.variante.nombre_variante }}</span>{% endif %}
-                        entregado a <strong>{{ m.local_vecino }}</strong>.</p>
+                        entregado a <strong class="text-brand-black">{{ m.local_vecino }}</strong>.</p>
                     
-                    <div class="row w-100 g-2 mt-2">
+                    <div class="row w-100 g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Cantidad</label>
+                            <label class="form-label fw-bold small text-brand-black">Cantidad a Cobrar</label>
                             <div class="input-group">
-                                <input type="number" name="cantidad_vendida" class="form-control bg-light border-0" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
-                                <span class="input-group-text border-0 bg-light text-muted">/ {{ m.cantidad }}</span>
+                                <input type="number" name="cantidad_vendida" class="form-control bg-light border fw-bold" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
+                                <span class="input-group-text border bg-light text-muted">/ {{ m.cantidad }}</span>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Precio Unitario</label>
+                            <label class="form-label fw-bold small text-brand-black">Precio Unitario ($)</label>
                             <div class="input-group">
-                                <span class="input-group-text border-0 bg-light text-success fw-bold">$</span>
-                                <input type="number" step="1" min="0" class="form-control bg-light border-0" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
+                                <span class="input-group-text border bg-light text-success fw-bold">$</span>
+                                <input type="number" step="1" min="0" class="form-control bg-light border fw-bold text-success" name="precio_venta" value="{{ "%.0f"|format(m.valor_fijo * 1000 if m.valor_fijo and m.valor_fijo < 1000 else m.valor_fijo) if m.valor_fijo else "%.0f"|format((m.variante.precio_sugerido or m.producto.precio_sugerido)|float) }}" required>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <label class="form-label fw-bold">Medio de Pago a Recibir</label>
-                        <select name="metodo_pago" class="form-select bg-light border-0" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-brand-black">Medio de Pago a Recibir</label>
+                        <select name="metodo_pago" class="form-select bg-light border py-2" required>
                             <option value="efectivo">💵 Efectivo directo a Caja</option>
                             <option value="nequi">📱 Ingresará a Medio Digital (Nequi)</option>
                             <option value="bancolombia">🏦 Ingresará a Medio Digital (Bancolombia)</option>
@@ -456,11 +530,15 @@
                         </select>
                     </div>
                     
-                    <small class="text-muted mt-3 d-block">Nota: Si cobras menos de {{ m.cantidad }}, el sistema devolverá automáticamente el resto de unidades al inventario.</small>
+                    <div class="alert alert-light border py-2 px-3 rounded-3 mb-0 text-muted" style="font-size: 0.78rem;">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i> Si cobras menos de {{ m.cantidad }}, el sistema devolverá automáticamente el resto de unidades al inventario físico.
+                    </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success rounded-pill fw-bold px-4">Confirmar y Facturar</button>
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill fw-bold px-4 shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar y Cobrar
+                    </button>
                 </div>
             </form>
         </div>
@@ -470,7 +548,7 @@
 <!-- Modal Devolver -->
 <div class="modal fade text-start" id="devolverModal{{ m.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="color: #111827 !important; background-color: #ffffff;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form method="POST" action="{{ url_for('admin_bp.maneos_devolver', id=m.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="modal-header border-0 bg-light py-3 px-4">
@@ -479,14 +557,14 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body p-4 text-dark" style="color: #111827 !important;">
-                    <p class="mb-3 text-dark fs-6" style="color: #111827 !important;">
+                <div class="modal-body p-4 text-dark">
+                    <p class="mb-3 text-dark fs-6">
                         ¿Cuántas unidades de <strong class="text-dark fw-bold">{{ m.producto.nombre }}</strong>
                         {% if m.variante %}<span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill ms-1 fw-bold">{{ m.variante.nombre_variante }}</span>{% endif %}
                         devuelve <strong class="text-dark fw-bold">{{ m.local_vecino }}</strong>?
                     </p>
                     <div class="input-group input-group-lg mb-3">
-                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required style="color: #111827 !important;">
+                        <input type="number" name="cantidad_devuelta" class="form-control bg-light border-0 text-center fw-bold text-dark fs-3" min="1" max="{{ m.cantidad }}" value="{{ m.cantidad }}" required>
                         <span class="input-group-text border-0 bg-light text-dark fw-bold">/ {{ m.cantidad }} uds</span>
                     </div>
                     <div class="alert py-2 px-3 rounded-3 mb-0" style="background: #eff6ff; border: 1px dashed #93c5fd; color: #1e3a8a;">
@@ -509,36 +587,44 @@
 <!-- Modal Rápido para Crear Cliente / Local -->
 <div class="modal fade" id="modalCrearClienteRapido" tabindex="-1" aria-labelledby="modalCrearClienteRapidoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 bg-light">
-                <h5 class="modal-title fw-bold text-brand-black" id="modalCrearClienteRapidoLabel">
-                    <i class="fa-solid fa-store text-brand-blue me-2"></i>Registrar Nuevo Local / Cliente
-                </h5>
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 38px; height: 38px; background-color: var(--brand-primary);">
+                        <i class="fa-solid fa-store fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalCrearClienteRapidoLabel">
+                            Registrar Nuevo Local / Cliente
+                        </h5>
+                        <small class="text-muted">Creación rápida para asignarle maneos</small>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <form id="formCrearClienteRapido" onsubmit="return false;">
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre del Local o Persona <span class="text-danger">*</span></label>
-                        <input type="text" id="rapidoNombre" class="form-control bg-light border-0" placeholder="Ej: Fundas Alex, Don Carlos" required>
+                        <label class="form-label fw-bold small text-brand-black">Nombre del Local o Persona <span class="text-danger">*</span></label>
+                        <input type="text" id="rapidoNombre" class="form-control bg-light border py-2" placeholder="Ej: Fundas Alex, Don Carlos" required>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-bold">Local / Puesto</label>
-                            <input type="text" id="rapidoLocal" class="form-control bg-light border-0" placeholder="Ej: Local 102">
+                            <label class="form-label fw-bold small text-brand-black">Local / Puesto</label>
+                            <input type="text" id="rapidoLocal" class="form-control bg-light border py-2" placeholder="Ej: Local 102">
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-bold">WhatsApp / Teléfono</label>
-                            <input type="text" id="rapidoTelefono" class="form-control bg-light border-0" placeholder="Ej: 3123456789">
+                            <label class="form-label fw-bold small text-brand-black">WhatsApp / Teléfono</label>
+                            <input type="text" id="rapidoTelefono" class="form-control bg-light border py-2" placeholder="Ej: 3123456789">
                         </div>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label fw-bold">Persona Encargada</label>
-                        <input type="text" id="rapidoContacto" class="form-control bg-light border-0" placeholder="Ej: Alexander Gómez">
+                        <label class="form-label fw-bold small text-brand-black">Persona Encargada</label>
+                        <input type="text" id="rapidoContacto" class="form-control bg-light border py-2" placeholder="Ej: Alexander Gómez">
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light">
-                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm" id="btnGuardarClienteRapido">
                         <i class="fa-solid fa-check me-1"></i> Guardar y Seleccionar
                     </button>
@@ -694,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
         variantSelect.addEventListener('change', function() {
             const selectedOption = variantSelect.options[variantSelect.selectedIndex];
             if (variantSelect.value && selectedOption.dataset.stock) {
-                variantStockInfo.innerHTML = `<i class="fa-solid fa-cubes text-primary me-1"></i> Stock: <strong>${selectedOption.dataset.stock}</strong> uds`;
+                variantStockInfo.innerHTML = `<i class="fa-solid fa-cubes text-brand-primary me-1"></i> Stock: <strong>${selectedOption.dataset.stock}</strong> uds`;
             } else {
                 variantStockInfo.textContent = '';
             }
@@ -717,15 +803,15 @@ document.addEventListener('DOMContentLoaded', function() {
         row.className = 'row g-2 align-items-start mb-2 fila-maneo';
         row.innerHTML = `
             <div class="col-2">
-                <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input" min="1" placeholder="">
+                <input type="number" name="cantidad[]" class="form-control bg-light border-0 cantidad-input maneo-input-custom" min="1" placeholder="1">
             </div>
             <div class="col-3">
-                <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input" placeholder="Ej: 5, 10, 15">
+                <input type="number" step="any" name="valor_fijo[]" class="form-control bg-light border-0 valor-input maneo-input-custom" placeholder="Ej: 5, 10, 15">
                 <div class="valor-preview-badge mt-1 ps-1"></div>
             </div>
             <div class="col-7">
                 <div class="d-flex align-items-center gap-1">
-                    <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input" placeholder="Escribe el nombre o escanea el SKU...">
+                    <input type="text" name="sku[]" list="productos_list" class="form-control bg-light border-0 sku-input maneo-input-custom" placeholder="Escribe el nombre o escanea el SKU...">
                     <button type="button" class="btn-del-row" title="Eliminar fila" tabindex="-1">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -805,7 +891,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ==========================================
     // BUSCADOR INTELIGENTE DE LOCALES / CLIENTES
-    // Con prioridad de coincidencia al inicio del nombre/local
     // ==========================================
     const todosLosClientes = [
         {% for c in clientes %}
@@ -844,24 +929,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let score = 999;
 
-            // Prioridad 1: El nombre empieza exactamente con la letra/término (ej: "A" -> "ALEJA")
             if (normNombre.startsWith(q)) {
                 score = 1;
-            }
-            // Prioridad 2: El número de local empieza con el término (ej: "1" -> "1188")
-            else if (normLocal && normLocal.startsWith(q)) {
+            } else if (normLocal && normLocal.startsWith(q)) {
                 score = 2;
-            }
-            // Prioridad 3: Alguna palabra interna del nombre empieza con el término (ej: "Boutique Andrea" -> "A")
-            else if (palabras.some(w => w.startsWith(q))) {
+            } else if (palabras.some(w => w.startsWith(q))) {
                 score = 3;
-            }
-            // Prioridad 4: Contiene el término dentro del nombre
-            else if (normNombre.includes(q)) {
+            } else if (normNombre.includes(q)) {
                 score = 4;
-            }
-            // Prioridad 5: Contiene el término dentro del local
-            else if (normLocal && normLocal.includes(q)) {
+            } else if (normLocal && normLocal.includes(q)) {
                 score = 5;
             }
 
@@ -870,7 +946,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Ordenamiento con prioridad al inicio
         matches.sort((a, b) => {
             if (a.score !== b.score) return a.score - b.score;
             return a.nombre.localeCompare(b.nombre);
@@ -911,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             item.innerHTML = `
                 <div class="d-flex align-items-center me-2">
-                    <i class="fa-solid fa-store text-muted me-2 small"></i>
+                    <i class="fa-solid fa-store text-brand-primary me-2 small"></i>
                     <span class="fw-bold text-brand-black">${c.nombre}</span>
                     ${localBadge}
                 </div>
@@ -985,14 +1060,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Cerrar dropdown al hacer click fuera
     document.addEventListener('click', function(e) {
         if (comboboxWrapper && !comboboxWrapper.contains(e.target)) {
             if (dropdownClientesList) dropdownClientesList.style.display = 'none';
         }
     });
 
-    // Auto-seleccionar si vino cliente_id en la URL
     const clienteIdPreseleccionado = {{ selected_cliente_id or 'null' }};
     if (clienteIdPreseleccionado) {
         const pre = todosLosClientes.find(c => c.id === clienteIdPreseleccionado);
@@ -1001,7 +1074,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // AJAX para crear cliente rápido desde el modal
     function ejecutarGuardadoClienteRapido() {
         const nombreInput = document.getElementById('rapidoNombre');
         const localInput = document.getElementById('rapidoLocal');

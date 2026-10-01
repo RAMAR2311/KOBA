@@ -1,155 +1,254 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .form-card-section {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 20px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1.5rem;
+    }
+
+    .form-section-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--brand-dark);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .form-control-custom {
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        font-weight: 600;
+        color: #1e293b;
+        transition: all 0.2s ease;
+    }
+    .form-control-custom:focus {
+        background-color: #ffffff;
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 4px rgba(0, 139, 139, 0.15);
+    }
+
+    .variant-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+    .variant-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+</style>
+
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-9">
+        <!-- Encabezado con Botón de Retorno -->
         <div class="d-flex align-items-center mb-4">
-            <a href="/inventory" class="btn btn-light rounded-circle me-3 border-0"><i class="fa-solid fa-arrow-left"></i></a>
-            <h2 class="fw-bold text-brand-black mb-0">{% if producto %}Editar Producto{% else %}Crear Producto{% endif %}</h2>
+            <a href="/inventory" class="btn btn-white rounded-circle me-3 border shadow-sm d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                <i class="fa-solid fa-arrow-left text-dark"></i>
+            </a>
+            <div>
+                <h2 class="fw-bold text-brand-dark mb-0 font-heading" style="font-size: 1.85rem;">
+                    {% if producto %}Editar Producto{% else %}Crear Nuevo Producto{% endif %}
+                </h2>
+                <small class="text-muted">Configura la información básica, precios y subcategorías del producto.</small>
+            </div>
         </div>
 
-        <div class="card card-custom p-5">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                
-                <div class="row g-4">
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <!-- Sección 1: Datos Principales -->
+            <div class="form-card-section">
+                <div class="form-section-title">
+                    <div class="sidebar-icon-box icon-box-teal" style="width: 34px; height: 34px; font-size: 1rem; margin-right: 0;">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <span>Información Principal</span>
+                </div>
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold text-brand-black">SKU / Código Maestro</label>
-                        <input type="text" class="form-control bg-light border-0" name="sku" required placeholder="Ej: FUNDA-XXX" value="{{ producto.sku if producto else '' }}">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">SKU / Código Maestro</label>
+                        <input type="text" class="form-control form-control-custom" name="sku" required placeholder="Ej: FUNDA-XXX" value="{{ producto.sku if producto else '' }}">
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label fw-bold text-brand-black">Nombre del Producto Maestro</label>
-                        <input type="text" class="form-control bg-light border-0" name="nombre" required placeholder="Acme Case Pro" value="{{ producto.nombre if producto else '' }}">
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold text-brand-black mb-0"><i class="fa-solid fa-sitemap me-2"></i>Subcategorías</h5>
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="addVariantBtn">
-                                <i class="fa-solid fa-plus me-1"></i> Añadir Subcategoría
-                            </button>
-                        </div>
-                        <div class="alert alert-info py-2 small border-0 rounded-3">
-                            <i class="fa-solid fa-circle-info me-1"></i> Si no añades variantes, el sistema usará los valores base (stock y precios) definidos abajo.
-                        </div>
-                        
-                        <div id="variantsContainer" class="mb-4">
-                            {% if producto and producto.variantes %}
-                                {% for v in producto.variantes %}
-                                <div class="variant-row card border-0 shadow-sm p-3 mb-2 bg-white">
-                                    <input type="hidden" name="variant_id[]" value="{{ v.id }}">
-                                    <div class="row g-2 align-items-end">
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold">Nombre</label>
-                                            <input type="text" name="v_nombre[]" class="form-control form-control-sm" value="{{ v.nombre_variante }}" required>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label small fw-bold">Stock</label>
-                                            <input type="number" name="v_stock[]" class="form-control form-control-sm" value="{{ v.cantidad_stock }}" required>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label small fw-bold">Costo</label>
-                                            <input type="number" step="1" name="v_costo[]" class="form-control form-control-sm" value="{{ "%.0f"|format(v.precio_costo|float) if v.precio_costo else '' }}">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label small fw-bold">P. Min</label>
-                                            <input type="number" step="1" name="v_min[]" class="form-control form-control-sm" value="{{ "%.0f"|format(v.precio_minimo|float) if v.precio_minimo else '' }}">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label small fw-bold">P. Sug</label>
-                                            <input type="number" step="1" name="v_sug[]" class="form-control form-control-sm" value="{{ "%.0f"|format(v.precio_sugerido|float) if v.precio_sugerido else '' }}">
-                                        </div>
-                                        <div class="col-md-1 text-end">
-                                            <button type="button" class="btn btn-sm btn-link text-danger remove-variant" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div id="baseInfoSection" class="row g-4 {% if producto and producto.variantes %}d-none{% endif %}">
-                        <div class="col-md-3 mt-4">
-                            <label class="form-label fw-bold text-brand-black text-truncate">Existencias (Base)</label>
-                            <input type="number" class="form-control bg-light border-0" name="cantidad_stock" value="{{ producto.cantidad_stock if producto else '0' }}">
-                        </div>
-                        <div class="col-md-3 mt-4">
-                            <label class="form-label fw-bold text-brand-black text-truncate">Costo Compra (Base)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-0">$</span>
-                                <input type="number" step="1" class="form-control bg-light border-0" name="precio_costo" value="{{ "%.0f"|format(producto.precio_costo|float) if producto else '0' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-3 mt-4">
-                            <label class="form-label fw-bold text-brand-black text-truncate">Precio Mínimo (Base)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-0">$</span>
-                                <input type="number" step="1" class="form-control bg-light border-0" name="precio_minimo" value="{{ "%.0f"|format(producto.precio_minimo|float) if producto else '0' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-3 mt-4">
-                            <label class="form-label fw-bold text-brand-black text-truncate">Precio Sugerido (Base)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-0">$</span>
-                                <input type="number" step="1" class="form-control bg-light border-0" name="precio_sugerido" value="{{ "%.0f"|format(producto.precio_sugerido|float) if producto else '0' }}">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mt-4">
-                        <label class="form-label fw-bold text-brand-black">Imagen del Producto Maestro</label>
-                        <input type="file" class="form-control bg-light border-0" name="imagen" accept="image/*">
-                        {% if producto and producto.imagen %}
-                            <small class="text-muted d-block mt-2">Imagen actual: <a href="{{ url_for('static', filename='uploads/' ~ producto.imagen) }}" target="_blank">{{ producto.imagen }}</a></small>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 mt-4">
-                        <label class="form-label fw-bold text-brand-black">Observaciones Generales</label>
-                        <textarea class="form-control bg-light border-0" name="observacion" rows="3" placeholder="Notas sobre el producto maestro...">{{ producto.observacion if producto and producto.observacion else '' }}</textarea>
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Nombre del Producto</label>
+                        <input type="text" class="form-control form-control-custom" name="nombre" required placeholder="Ej: Funda Siliconada Premium" value="{{ producto.nombre if producto else '' }}">
                     </div>
                 </div>
+            </div>
 
-                <hr class="my-5 border-light">
-                
-                <div class="text-end">
-                    <a href="/inventory" class="btn btn-link text-muted text-decoration-none fw-bold me-3">Cancelar</a>
-                    <!-- Botón Guardar en Azul Turquesa -->
-                    <button type="submit" class="btn btn-blue px-5 py-2 rounded-pill shadow-sm fw-bold">
-                        Guardar Producto Maestro
+            <!-- Sección 2: Subcategorías / Variantes -->
+            <div class="form-card-section">
+                <div class="d-flex justify-content-between align-items-center form-section-title">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="sidebar-icon-box icon-box-purple" style="width: 34px; height: 34px; font-size: 1rem; margin-right: 0;">
+                            <i class="fa-solid fa-sitemap"></i>
+                        </div>
+                        <span>Subcategorías / Variantes (Opcional)</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-1" id="addVariantBtn">
+                        <i class="fa-solid fa-plus"></i> Añadir Subcategoría
                     </button>
                 </div>
-            </form>
-        </div>
+                <div class="alert alert-light border py-2 px-3 small rounded-3 mb-3 text-muted">
+                    <i class="fa-solid fa-circle-info text-primary me-1"></i> Si agregas variantes (ej: Colores o Tallas), el stock y precios se manejarán individualmente por cada variante.
+                </div>
+
+                <div id="variantsContainer" class="mb-2">
+                    {% if producto and producto.variantes %}
+                        {% for v in producto.variantes %}
+                        <div class="variant-card">
+                            <input type="hidden" name="variant_id[]" value="{{ v.id }}">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">Subcategoría</label>
+                                    <input type="text" name="v_nombre[]" class="form-control form-control-custom form-control-sm" value="{{ v.nombre_variante }}" required placeholder="Ej: Negro">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-muted">Stock</label>
+                                    <input type="number" name="v_stock[]" class="form-control form-control-custom form-control-sm" value="{{ v.cantidad_stock }}" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-muted">P. Costo</label>
+                                    <input type="number" step="1" name="v_costo[]" class="form-control form-control-custom form-control-sm" value="{{ "%.0f"|format(v.precio_costo|float) if v.precio_costo else '' }}" placeholder="Opcional">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-muted">P. Mínimo</label>
+                                    <input type="number" step="1" name="v_min[]" class="form-control form-control-custom form-control-sm" value="{{ "%.0f"|format(v.precio_minimo|float) if v.precio_minimo else '' }}" placeholder="Opcional">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-muted">P. Sugerido</label>
+                                    <input type="number" step="1" name="v_sug[]" class="form-control form-control-custom form-control-sm" value="{{ "%.0f"|format(v.precio_sugerido|float) if v.precio_sugerido else '' }}" placeholder="Opcional">
+                                </div>
+                                <div class="col-md-1 text-end">
+                                    <button type="button" class="btn btn-sm btn-light text-danger rounded-circle p-2 remove-variant" title="Eliminar">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sección 3: Precios y Stock Base (visible si no hay variantes) -->
+            <div id="baseInfoSection" class="form-card-section {% if producto and producto.variantes %}d-none{% endif %}">
+                <div class="form-section-title">
+                    <div class="sidebar-icon-box icon-box-amber" style="width: 34px; height: 34px; font-size: 1rem; margin-right: 0;">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <span>Precios y Existencias Base</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Stock Físico</label>
+                        <input type="number" class="form-control form-control-custom" name="cantidad_stock" value="{{ producto.cantidad_stock if producto else '0' }}">
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Costo Compra</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0 fw-bold">$</span>
+                            <input type="number" step="1" class="form-control form-control-custom" name="precio_costo" value="{{ "%.0f"|format(producto.precio_costo|float) if producto else '0' }}">
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Precio Mínimo</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0 fw-bold">$</span>
+                            <input type="number" step="1" class="form-control form-control-custom" name="precio_minimo" value="{{ "%.0f"|format(producto.precio_minimo|float) if producto else '0' }}">
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Precio Sugerido</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0 fw-bold">$</span>
+                            <input type="number" step="1" class="form-control form-control-custom" name="precio_sugerido" value="{{ "%.0f"|format(producto.precio_sugerido|float) if producto else '0' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 4: Imagen y Observaciones -->
+            <div class="form-card-section">
+                <div class="form-section-title">
+                    <div class="sidebar-icon-box icon-box-blue" style="width: 34px; height: 34px; font-size: 1rem; margin-right: 0;">
+                        <i class="fa-solid fa-image"></i>
+                    </div>
+                    <span>Multimedia y Observaciones</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Foto del Producto</label>
+                        <input type="file" class="form-control form-control-custom" name="imagen" accept="image/*">
+                        {% if producto and producto.imagen %}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fa-solid fa-image me-1"></i> Imagen actual: 
+                                <a href="{{ url_for('static', filename='uploads/' ~ producto.imagen) }}" target="_blank" class="fw-bold text-primary">{{ producto.imagen }}</a>
+                            </small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-brand-dark small text-uppercase">Observaciones Generales</label>
+                        <textarea class="form-control form-control-custom" name="observacion" rows="3" placeholder="Notas sobre el producto maestro...">{{ producto.observacion if producto and producto.observacion else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra de Guardado Inferior -->
+            <div class="d-flex justify-content-end align-items-center gap-2 mb-5">
+                <a href="/inventory" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-muted">Cancelar</a>
+                <button type="submit" class="btn btn-dark-pill px-5 py-2 shadow-sm d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Guardar Producto</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <template id="variantTemplate">
-    <div class="variant-row card border-0 shadow-sm p-3 mb-2 bg-white animate__animated animate__fadeInUp">
+    <div class="variant-card animate__animated animate__fadeInUp">
         <input type="hidden" name="variant_id[]" value="">
         <div class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Nombre de Subcategoría</label>
-                <input type="text" name="v_nombre[]" class="form-control form-control-sm" placeholder="Ej: Rojo / L" required>
+                <label class="form-label small fw-bold text-muted">Subcategoría</label>
+                <input type="text" name="v_nombre[]" class="form-control form-control-custom form-control-sm" placeholder="Ej: Rojo / XL" required>
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-bold">Stock</label>
-                <input type="number" name="v_stock[]" class="form-control form-control-sm" placeholder="0" required>
+                <label class="form-label small fw-bold text-muted">Stock</label>
+                <input type="number" name="v_stock[]" class="form-control form-control-custom form-control-sm" placeholder="0" required>
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-bold">Costo</label>
-                <input type="number" step="1" name="v_costo[]" class="form-control form-control-sm" placeholder="Opcional">
+                <label class="form-label small fw-bold text-muted">P. Costo</label>
+                <input type="number" step="1" name="v_costo[]" class="form-control form-control-custom form-control-sm" placeholder="Opcional">
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-bold">P. Min</label>
-                <input type="number" step="1" name="v_min[]" class="form-control form-control-sm" placeholder="Opcional">
+                <label class="form-label small fw-bold text-muted">P. Mínimo</label>
+                <input type="number" step="1" name="v_min[]" class="form-control form-control-custom form-control-sm" placeholder="Opcional">
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-bold">P. Sug</label>
-                <input type="number" step="1" name="v_sug[]" class="form-control form-control-sm" placeholder="Opcional">
+                <label class="form-label small fw-bold text-muted">P. Sugerido</label>
+                <input type="number" step="1" name="v_sug[]" class="form-control form-control-custom form-control-sm" placeholder="Opcional">
             </div>
             <div class="col-md-1 text-end">
-                <button type="button" class="btn btn-sm btn-link text-danger remove-variant" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-light text-danger rounded-circle p-2 remove-variant" title="Eliminar">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -178,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     container.addEventListener('click', (e) => {
         if (e.target.closest('.remove-variant')) {
-            e.target.closest('.variant-row').remove();
+            e.target.closest('.variant-card').remove();
             toggleBaseInfo();
         }
     });

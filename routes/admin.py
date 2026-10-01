@@ -96,8 +96,65 @@ def dashboard():
     ultimo_dia = calendar.monthrange(anio, mes)[1]
     fin_mes = datetime(anio, mes, ultimo_dia, 23, 59, 59)
     
+    # Ventas e Ingresos del mes
     total_ventas = db.session.query(func.sum(Sale.monto_total)).filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes).scalar() or 0.0
     conteo_ventas = Sale.query.filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes).count()
+    
+    # Desglose de ingresos por método de pago
+    ventas_efectivo = db.session.query(func.sum(SalePayment.monto))\
+        .join(Sale, SalePayment.sale_id == Sale.id)\
+        .filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes, SalePayment.metodo_pago == 'efectivo').scalar()
+    
+    if ventas_efectivo is None:
+        # Fallback si no usan SalePayment aún
+        ventas_efectivo = db.session.query(func.sum(Sale.monto_total))\
+            .filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes, Sale.metodo_pago == 'efectivo').scalar() or 0.0
+            
+    ventas_transferencia = float(total_ventas) - float(ventas_efectivo)
+    if ventas_transferencia < 0:
+        ventas_transferencia = 0.0
+
+    # Mercancía vendida y Costo Directo (COGS)
+    detalles_mes = db.session.query(SaleDetail)\
+        .join(Sale, SaleDetail.sale_id == Sale.id)\
+        .filter(Sale.fecha_venta >= inicio_mes, Sale.fecha_venta <= fin_mes).all()
+        
+    mercancia_vendida_uds = sum(d.cantidad_vendida for d in detalles_mes)
+    referencias_vendidas_set = set(d.product_id for d in detalles_mes if d.product_id)
+    referencias_vendidas = len(referencias_vendidas_set)
+    
+    cogs_mes = 0.0
+    for d in detalles_mes:
+        costo_unit = 0.0
+        if d.precio_costo_manual:
+            costo_unit = float(d.precio_costo_manual)
+        elif d.variante and d.variante.precio_costo:
+            costo_unit = float(d.variante.precio_costo)
+        elif d.producto and d.producto.precio_costo:
+            costo_unit = float(d.producto.precio_costo)
+        cogs_mes += costo_unit * d.cantidad_vendida
+
+    # Gastos del mes
+    gastos_mes = db.session.query(func.sum(Expense.monto))\
+        .filter(Expense.fecha_gasto >= inicio_mes, Expense.fecha_gasto <= fin_mes).scalar() or 0.0
+    conteo_gastos = Expense.query.filter(Expense.fecha_gasto >= inicio_mes, Expense.fecha_gasto <= fin_mes).count()
+    
+    gastos_diarios = db.session.query(func.sum(Expense.monto))\
+        .filter(Expense.fecha_gasto >= inicio_mes, Expense.fecha_gasto <= fin_mes, Expense.tipo_gasto == 'Gasto Diario').scalar() or 0.0
+    gastos_indirectos = db.session.query(func.sum(Expense.monto))\
+        .filter(Expense.fecha_gasto >= inicio_mes, Expense.fecha_gasto <= fin_mes, Expense.tipo_gasto == 'Costo Indirecto').scalar() or 0.0
+
+    # Utilidad Estimada (Ventas - COGS - Gastos)
+    utilidad_estimada = float(total_ventas) - float(cogs_mes) - float(gastos_mes)
+
+    # Ajustes de stock en el periodo
+    ajustes_stock_periodo = StockAdjustment.query.filter(StockAdjustment.fecha_ajuste >= inicio_mes, StockAdjustment.fecha_ajuste <= fin_mes).count()
+
+    # Abonos a proveedores en el periodo
+    from models import ProviderPayment
+    abonos_proveedores = db.session.query(func.sum(ProviderPayment.monto_abonado))\
+        .filter(ProviderPayment.fecha_pago >= inicio_mes, ProviderPayment.fecha_pago <= fin_mes).scalar() or 0.0
+    conteo_abonos_prov = ProviderPayment.query.filter(ProviderPayment.fecha_pago >= inicio_mes, ProviderPayment.fecha_pago <= fin_mes).count()
 
     meses = {
         1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
@@ -111,6 +168,19 @@ def dashboard():
                            productos_bajo_stock=productos_bajo_stock,
                            total_ventas=total_ventas,
                            conteo_ventas=conteo_ventas,
+                           ventas_efectivo=ventas_efectivo,
+                           ventas_transferencia=ventas_transferencia,
+                           mercancia_vendida_uds=mercancia_vendida_uds,
+                           referencias_vendidas=referencias_vendidas,
+                           gastos_mes=gastos_mes,
+                           conteo_gastos=conteo_gastos,
+                           gastos_diarios=gastos_diarios,
+                           gastos_indirectos=gastos_indirectos,
+                           cogs_mes=cogs_mes,
+                           utilidad_estimada=utilidad_estimada,
+                           ajustes_stock_periodo=ajustes_stock_periodo,
+                           abonos_proveedores=abonos_proveedores,
+                           conteo_abonos_prov=conteo_abonos_prov,
                            maneos_activos=maneos_activos,
                            mes=mes,
                            anio=anio,
