@@ -291,39 +291,81 @@ def imprimir_ticket(sale_id):
 @login_required
 @admin_required
 def historial():
-    # Calcular el valor exacto de 'HOY' en Bogotá
-    hoy_bogota = obtener_hora_bogota().strftime('%Y-%m-%d')
-    
-    # Si existen los args, los usa, de lo contrario colapsa a HOY por defecto
-    fecha_inicio = request.args.get('fecha_inicio', hoy_bogota)
-    fecha_fin = request.args.get('fecha_fin', hoy_bogota)
-    
-    # Optimización: eager loading (evita N+1 con joinedload)
+    import calendar
+    ahora_bogota = obtener_hora_bogota()
+    hoy_bogota = ahora_bogota.strftime('%Y-%m-%d')
+    mes_actual = ahora_bogota.month
+    anio_actual = ahora_bogota.year
+
+    tipo_filtro = request.args.get('tipo_filtro', '').strip()
+    mes_param = request.args.get('mes')
+    anio_param = request.args.get('anio')
+    q_busqueda = request.args.get('q', '').strip()
+
+    # Si no se envía tipo_filtro pero sí fecha_inicio / fecha_fin distintos a hoy
+    fecha_inicio = request.args.get('fecha_inicio', '').strip()
+    fecha_fin = request.args.get('fecha_fin', '').strip()
+
+    if mes_param and not tipo_filtro:
+        tipo_filtro = 'mes'
+    elif fecha_inicio or fecha_fin:
+        if not tipo_filtro:
+            tipo_filtro = 'rango'
+    elif not tipo_filtro:
+        tipo_filtro = 'hoy'
+
+    mes_sel = int(mes_param) if mes_param and mes_param.isdigit() else mes_actual
+    anio_sel = int(anio_param) if anio_param and anio_param.isdigit() else anio_actual
+
+    # Optimización: eager loading
     query = Sale.query.options(joinedload(Sale.vendedor))
-    
-    # Motor de búsqueda por Rango Restricto
-    if fecha_inicio:
-        inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
-        query = query.filter(Sale.fecha_venta >= inicio_dt)
+
+    if tipo_filtro == 'hoy':
+        inicio_dt = datetime.strptime(hoy_bogota, '%Y-%m-%d')
+        fin_dt = inicio_dt + timedelta(days=1)
+        query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta < fin_dt)
+        fecha_inicio = hoy_bogota
+        fecha_fin = hoy_bogota
+    elif tipo_filtro == 'mes':
+        _, last_day = calendar.monthrange(anio_sel, mes_sel)
+        inicio_dt = datetime(anio_sel, mes_sel, 1, 0, 0, 0)
+        fin_dt = datetime(anio_sel, mes_sel, last_day, 23, 59, 59)
+        query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta <= fin_dt)
+        fecha_inicio = inicio_dt.strftime('%Y-%m-%d')
+        fecha_fin = fin_dt.strftime('%Y-%m-%d')
+    else: # rango
+        if not fecha_inicio:
+            fecha_inicio = hoy_bogota
+        if not fecha_fin:
+            fecha_fin = hoy_bogota
         
-    if fecha_fin:
-        fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
-        # Sumar 1 día matemáticamente para incluir los registros hasta las 23:59:59 del último día
-        query = query.filter(Sale.fecha_venta < fin_dt + timedelta(days=1))
-        
+        try:
+            inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+            fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta < fin_dt)
+        except ValueError:
+            pass
+
+    # Filtro opcional por búsqueda de Ticket ID
+    if q_busqueda:
+        clean_q = q_busqueda.replace('#', '').strip()
+        if clean_q.isdigit():
+            query = query.filter(Sale.id == int(clean_q))
+
     ventas = query.order_by(Sale.fecha_venta.desc()).all()
-    
-    # Auditar y cruzar sumatorios de métricas de pago
-    # Sistema híbrido: usa SalePayment si existe, caso contrario cae al metodo_pago legacy
+
+    # Sumatorios de métricas de pago
     total_efectivo = Decimal('0')
     total_nequi = Decimal('0')
     total_bancolombia = Decimal('0')
     total_daviplata = Decimal('0')
     total_transferencia_legacy = Decimal('0')
-    total_mixto = 0  # Contador de ventas con pago mixto
+    total_mixto = 0
+    total_general = Decimal('0')
 
     for v in ventas:
-        if v.pagos:  # Pagos nuevos con tabla sale_payments
+        total_general += v.monto_total
+        if v.pagos:
             for pago in v.pagos:
                 if pago.metodo_pago == 'efectivo':
                     total_efectivo += pago.monto
@@ -337,7 +379,7 @@ def historial():
                     total_transferencia_legacy += pago.monto
             if len(v.pagos) > 1:
                 total_mixto += 1
-        else:  # Retrocompatibilidad con ventas antiguas sin SalePayment
+        else:
             if v.metodo_pago == 'efectivo':
                 total_efectivo += v.monto_total
             elif v.metodo_pago == 'nequi':
@@ -349,7 +391,11 @@ def historial():
             elif v.metodo_pago == 'transferencia':
                 total_transferencia_legacy += v.monto_total
 
-    # Envío al Engine de HTML
+    nombres_meses = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
+        7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+    }
+
     return render_template('sales/historial.html', 
                            ventas=ventas, 
                            total_efectivo=total_efectivo,
@@ -358,8 +404,14 @@ def historial():
                            total_daviplata=total_daviplata,
                            total_transferencia_legacy=total_transferencia_legacy,
                            total_mixto=total_mixto,
+                           total_general=total_general,
                            fecha_inicio=fecha_inicio,
-                           fecha_fin=fecha_fin)
+                           fecha_fin=fecha_fin,
+                           tipo_filtro=tipo_filtro,
+                           mes_sel=mes_sel,
+                           anio_sel=anio_sel,
+                           nombre_mes_sel=nombres_meses.get(mes_sel, ''),
+                           q_busqueda=q_busqueda)
 
 
 # Endpoint Visor de Ventas del Día para Cajeros (Solo lectura, se resetea cada día)
