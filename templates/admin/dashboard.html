@@ -249,7 +249,7 @@
                 <span class="small text-muted me-1">📅</span>
                 <span class="small fw-bold text-brand-dark">Por Mes</span>
             </div>
-            <select name="mes" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light px-3 py-2" style="width: auto; cursor: pointer;">
+            <select name="mes" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light py-2" style="min-width: 115px; padding-left: 12px; padding-right: 28px; cursor: pointer;">
                 <option value="1" {% if mes == 1 %}selected{% endif %}>Enero</option>
                 <option value="2" {% if mes == 2 %}selected{% endif %}>Febrero</option>
                 <option value="3" {% if mes == 3 %}selected{% endif %}>Marzo</option>
@@ -263,7 +263,7 @@
                 <option value="11" {% if mes == 11 %}selected{% endif %}>Noviembre</option>
                 <option value="12" {% if mes == 12 %}selected{% endif %}>Diciembre</option>
             </select>
-            <select name="anio" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light px-3 py-2" style="width: auto; cursor: pointer;">
+            <select name="anio" class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light py-2" style="min-width: 95px; padding-left: 12px; padding-right: 28px; cursor: pointer;">
                 <option value="2024" {% if anio == 2024 %}selected{% endif %}>2024</option>
                 <option value="2025" {% if anio == 2025 %}selected{% endif %}>2025</option>
                 <option value="2026" {% if anio == 2026 %}selected{% endif %}>2026</option>
