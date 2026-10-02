@@ -109,7 +109,7 @@
         margin-bottom: 1rem;
     }
     .payment-pill {
-        flex: 1 1 calc(33.333% - 6px);
+        flex: 1 1 calc(50% - 6px);
         min-width: 80px;
         background: #ffffff;
         border: 1.5px solid #e2e8f0;
@@ -328,10 +328,6 @@
                             <i class="fa-solid fa-wallet text-danger"></i>
                             <span>Daviplata</span>
                         </div>
-                        <div class="payment-pill" data-method="bolt" onclick="selectPaymentMethod('bolt')">
-                            <i class="fa-solid fa-bolt text-warning"></i>
-                            <span>Bolt</span>
-                        </div>
                     </div>
                 </div>
 
@@ -436,8 +432,7 @@
         { value: 'efectivo', label: '💵 Efectivo' },
         { value: 'nequi', label: '📱 Nequi' },
         { value: 'bancolombia', label: '🏦 Bancolombia' },
-        { value: 'daviplata', label: '📱 Daviplata' },
-        { value: 'bolt', label: '⚡ Bolt' }
+        { value: 'daviplata', label: '📱 Daviplata' }
     ];
 
     function formatoCOP(valor) {
@@ -466,8 +461,29 @@
         });
     });
 
+    const btnClearCart = document.getElementById('btn_clear_cart');
+    if (btnClearCart) {
+        btnClearCart.addEventListener('click', () => {
+            carrito = [];
+            const togglePrint = document.getElementById('toggle_imprimir_recibo');
+            if (togglePrint) {
+                togglePrint.checked = false;
+            }
+            const cashInput = document.getElementById('montoRecibidoInput');
+            if (cashInput) cashInput.value = '';
+            const cambioDisplay = document.getElementById('cambioDisplay');
+            if (cambioDisplay) {
+                cambioDisplay.innerText = '$0';
+                cambioDisplay.className = 'fs-5 text-success font-heading';
+            }
+            renderCart();
+            resetPagosMixtos();
+        });
+    }
+
     function selectPaymentMethod(metodo) {
-        document.getElementById('metodo-pago').value = metodo;
+        const input = document.getElementById('metodo-pago');
+        if (input) input.value = metodo;
         document.querySelectorAll('.payment-pill').forEach(pill => {
             if (pill.dataset.method === metodo) {
                 pill.classList.add('active');
@@ -475,10 +491,16 @@
                 pill.classList.remove('active');
             }
         });
+
+        const cashCalc = document.getElementById('cashCalculatorSection');
+        if (cashCalc) {
+            cashCalc.style.display = (metodo === 'efectivo') ? 'block' : 'none';
+        }
     }
 
     function addQuickCash(monto) {
         const input = document.getElementById('montoRecibidoInput');
+        if (!input) return;
         let current = parseFloat(input.value) || 0;
         input.value = current + monto;
         calcularCambio();
@@ -486,6 +508,7 @@
 
     function setExactCash() {
         const input = document.getElementById('montoRecibidoInput');
+        if (!input) return;
         input.value = Math.round(obtenerGranTotal());
         calcularCambio();
     }
@@ -493,8 +516,17 @@
     function calcularCambio() {
         const input = document.getElementById('montoRecibidoInput');
         const display = document.getElementById('cambioDisplay');
-        const recibido = parseFloat(input.value) || 0;
+        if (!input || !display) return;
+        const valorRaw = input.value ? input.value.trim() : '';
+        const recibido = parseFloat(valorRaw) || 0;
         const total = obtenerGranTotal();
+        
+        if (!valorRaw || recibido === 0) {
+            display.innerText = '$0';
+            display.className = 'fs-5 text-success font-heading';
+            return;
+        }
+
         const cambio = recibido - total;
         if (cambio >= 0) {
             display.innerText = formatoCOP(cambio);
@@ -704,7 +736,8 @@
         } else {
             unicoSec.style.display = 'block';
             mixtoSec.style.display = 'none';
-            if (cashCalc) cashCalc.style.display = 'block';
+            const currentMethod = document.getElementById('metodo-pago') ? document.getElementById('metodo-pago').value : 'efectivo';
+            if (cashCalc) cashCalc.style.display = (currentMethod === 'efectivo') ? 'block' : 'none';
         }
     });
 

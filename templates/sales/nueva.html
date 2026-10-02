@@ -30,7 +30,7 @@
         margin-bottom: 1rem;
     }
     .payment-pill {
-        flex: 1 1 calc(33.333% - 6px);
+        flex: 1 1 calc(50% - 6px);
         min-width: 80px;
         background: #ffffff;
         border: 1.5px solid #e2e8f0;
@@ -220,10 +220,6 @@
                         <div class="payment-pill" data-method="daviplata" onclick="selectPaymentMethod('daviplata')">
                             <i class="fa-solid fa-wallet text-danger"></i>
                             <span>Daviplata</span>
-                        </div>
-                        <div class="payment-pill" data-method="bolt" onclick="selectPaymentMethod('bolt')">
-                            <i class="fa-solid fa-bolt text-warning"></i>
-                            <span>Bolt</span>
                         </div>
                     </div>
                 </div>
@@ -444,6 +440,13 @@
             togglePrint.checked = false;
             togglePrint.dispatchEvent(new Event('change'));
         }
+        const cashInput = document.getElementById('montoRecibidoInput');
+        if (cashInput) cashInput.value = '';
+        const cambioDisplay = document.getElementById('cambioDisplay');
+        if (cambioDisplay) {
+            cambioDisplay.innerText = '$0';
+            cambioDisplay.className = 'fs-5 text-success font-heading';
+        }
         renderizarCarrito();
         resetPagosMixtos();
     });
@@ -474,6 +477,62 @@
                 }
             }
         });
+    }
+
+    function selectPaymentMethod(metodo) {
+        const input = document.getElementById('metodo-pago');
+        if (input) input.value = metodo;
+        document.querySelectorAll('.payment-pill').forEach(pill => {
+            if (pill.dataset.method === metodo) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+        });
+
+        const cashCalc = document.getElementById('cashCalculatorSection');
+        if (cashCalc) {
+            cashCalc.style.display = (metodo === 'efectivo') ? 'block' : 'none';
+        }
+    }
+
+    function addQuickCash(monto) {
+        const input = document.getElementById('montoRecibidoInput');
+        if (!input) return;
+        let current = parseFloat(input.value) || 0;
+        input.value = current + monto;
+        calcularCambio();
+    }
+
+    function setExactCash() {
+        const input = document.getElementById('montoRecibidoInput');
+        if (!input) return;
+        input.value = Math.round(obtenerGranTotal());
+        calcularCambio();
+    }
+
+    function calcularCambio() {
+        const input = document.getElementById('montoRecibidoInput');
+        const display = document.getElementById('cambioDisplay');
+        if (!input || !display) return;
+        const valorRaw = input.value ? input.value.trim() : '';
+        const recibido = parseFloat(valorRaw) || 0;
+        const total = obtenerGranTotal();
+        
+        if (!valorRaw || recibido === 0) {
+            display.innerText = '$0';
+            display.className = 'fs-5 text-success font-heading';
+            return;
+        }
+
+        const cambio = recibido - total;
+        if (cambio >= 0) {
+            display.innerText = formatoCOP(cambio);
+            display.className = 'fs-5 text-success font-heading';
+        } else {
+            display.innerText = '- ' + formatoCOP(Math.abs(cambio));
+            display.className = 'fs-5 text-danger font-heading';
+        }
     }
 
 
@@ -519,10 +578,12 @@
     document.getElementById('toggle_pago_mixto').addEventListener('change', function() {
         const unicoSec = document.getElementById('pago_unico_section');
         const mixtoSec = document.getElementById('pago_mixto_section');
+        const cashCalc = document.getElementById('cashCalculatorSection');
         
         if (this.checked) {
             unicoSec.style.display = 'none';
             mixtoSec.style.display = 'block';
+            if (cashCalc) cashCalc.style.display = 'none';
             // Inicializar con un primer pago parcial
             if (pagosMixtos.length === 0) {
                 agregarPagoParcial();
@@ -531,6 +592,8 @@
         } else {
             unicoSec.style.display = 'block';
             mixtoSec.style.display = 'none';
+            const currentMethod = document.getElementById('metodo-pago') ? document.getElementById('metodo-pago').value : 'efectivo';
+            if (cashCalc) cashCalc.style.display = (currentMethod === 'efectivo') ? 'block' : 'none';
         }
     });
 
@@ -981,6 +1044,11 @@
         if (document.getElementById('toggle_pago_mixto').checked) {
             actualizarSaldoRestante();
         }
+
+        // Sincronizar cambio/vueltas
+        if (typeof calcularCambio === 'function' && document.getElementById('montoRecibidoInput') && document.getElementById('montoRecibidoInput').value) {
+            calcularCambio();
+        }
     }
 
     document.getElementById('btn_process_sale').addEventListener('click', function() {
@@ -1090,6 +1158,14 @@
                 if (togglePrint) {
                     togglePrint.checked = false;
                     togglePrint.dispatchEvent(new Event('change'));
+                }
+
+                const cashInput = document.getElementById('montoRecibidoInput');
+                if (cashInput) cashInput.value = '';
+                const cambioDisplay = document.getElementById('cambioDisplay');
+                if (cambioDisplay) {
+                    cambioDisplay.innerText = '$0';
+                    cambioDisplay.className = 'fs-5 text-success font-heading';
                 }
 
                 // Reinicia dinámicamente el CSS/Contador de caja visual a $0.00
