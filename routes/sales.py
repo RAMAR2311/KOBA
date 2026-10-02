@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, flash, redirect, render_template, abort, url_for
 from flask_login import login_required, current_user
-from models import db, Product, ProductVariant, Sale, SaleDetail, SalePayment, Expense, obtener_hora_bogota
+from models import db, Product, ProductVariant, Sale, SaleDetail, SalePayment, Expense, Maneo, Cliente, obtener_hora_bogota
 from decorators import admin_required
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -286,7 +286,7 @@ def imprimir_ticket(sale_id):
     venta = Sale.query.get_or_404(sale_id)
     return render_template('sales/ticket.html', venta=venta)
 
-# Endpoint Historial de Ventas (Administradores)
+# Endpoint Historial de Operaciones (Administradores: Unificado, Ventas y Maneos Cobrados)
 @sales_bp.route('/historial', methods=['GET'])
 @login_required
 @admin_required
@@ -296,6 +296,10 @@ def historial():
     hoy_bogota = ahora_bogota.strftime('%Y-%m-%d')
     mes_actual = ahora_bogota.month
     anio_actual = ahora_bogota.year
+
+    tipo_operacion = request.args.get('tipo_operacion', 'todas').strip().lower()
+    if tipo_operacion not in ['todas', 'ventas', 'maneos']:
+        tipo_operacion = 'todas'
 
     tipo_filtro = request.args.get('tipo_filtro', '').strip()
     mes_param = request.args.get('mes')
@@ -317,20 +321,15 @@ def historial():
     mes_sel = int(mes_param) if mes_param and mes_param.isdigit() else mes_actual
     anio_sel = int(anio_param) if anio_param and anio_param.isdigit() else anio_actual
 
-    # Optimización: eager loading
-    query = Sale.query.options(joinedload(Sale.vendedor))
-
     if tipo_filtro == 'hoy':
         inicio_dt = datetime.strptime(hoy_bogota, '%Y-%m-%d')
         fin_dt = inicio_dt + timedelta(days=1)
-        query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta < fin_dt)
         fecha_inicio = hoy_bogota
         fecha_fin = hoy_bogota
     elif tipo_filtro == 'mes':
         _, last_day = calendar.monthrange(anio_sel, mes_sel)
         inicio_dt = datetime(anio_sel, mes_sel, 1, 0, 0, 0)
         fin_dt = datetime(anio_sel, mes_sel, last_day, 23, 59, 59)
-        query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta <= fin_dt)
         fecha_inicio = inicio_dt.strftime('%Y-%m-%d')
         fecha_fin = fin_dt.strftime('%Y-%m-%d')
     else: # rango
@@ -342,19 +341,65 @@ def historial():
         try:
             inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
             fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d') + timedelta(days=1)
-            query = query.filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta < fin_dt)
         except ValueError:
-            pass
+            inicio_dt = datetime.strptime(hoy_bogota, '%Y-%m-%d')
+            fin_dt = inicio_dt + timedelta(days=1)
 
-    # Filtro opcional por búsqueda de Ticket ID
-    if q_busqueda:
+    # 1. Consultar Ventas en el período
+    query_v = Sale.query.options(
+        joinedload(Sale.vendedor),
+        joinedload(Sale.detalles).joinedload(SaleDetail.producto),
+        joinedload(Sale.detalles).joinedload(SaleDetail.variante),
+        joinedload(Sale.pagos)
+    ).filter(Sale.fecha_venta >= inicio_dt, Sale.fecha_venta < fin_dt)
+
+    if q_busqueda and tipo_operacion in ['todas', 'ventas']:
         clean_q = q_busqueda.replace('#', '').strip()
         if clean_q.isdigit():
-            query = query.filter(Sale.id == int(clean_q))
+            query_v = query_v.filter(Sale.id == int(clean_q))
 
-    ventas = query.order_by(Sale.fecha_venta.desc()).all()
+    ventas_en_periodo = query_v.order_by(Sale.fecha_venta.desc()).all()
 
-    # Sumatorios de métricas de pago
+    # 2. Consultar Maneos Cobrados en el período
+    query_m = Maneo.query.options(
+        joinedload(Maneo.producto),
+        joinedload(Maneo.variante),
+        joinedload(Maneo.cliente)
+    ).filter(
+        Maneo.estado == 'FACTURADO',
+        or_(
+            (Maneo.fecha_resolucion >= inicio_dt) & (Maneo.fecha_resolucion < fin_dt),
+            (Maneo.fecha_resolucion.is_(None)) & (Maneo.fecha_prestamo >= inicio_dt) & (Maneo.fecha_prestamo < fin_dt)
+        )
+    )
+
+    if q_busqueda and tipo_operacion in ['todas', 'maneos']:
+        clean_q = q_busqueda.replace('#', '').strip()
+        if clean_q.isdigit():
+            query_m = query_m.filter(or_(
+                Maneo.id == int(clean_q),
+                Maneo.local_vecino.ilike(f'%{q_busqueda}%'),
+                Maneo.producto.has(Product.nombre.ilike(f'%{q_busqueda}%'))
+            ))
+        else:
+            query_m = query_m.filter(or_(
+                Maneo.local_vecino.ilike(f'%{q_busqueda}%'),
+                Maneo.cliente.has(Cliente.nombre_o_razon_social.ilike(f'%{q_busqueda}%')),
+                Maneo.producto.has(Product.nombre.ilike(f'%{q_busqueda}%'))
+            ))
+
+    maneos_en_periodo = query_m.order_by(Maneo.fecha_resolucion.desc(), Maneo.fecha_prestamo.desc()).all()
+
+    # 3. Calcular Totales Específicos
+    total_ventas_periodo = sum(v.monto_total for v in ventas_en_periodo)
+    total_maneos_periodo = sum(Decimal(str(m.subtotal_calculado)) for m in maneos_en_periodo)
+    gran_total_unificado = total_ventas_periodo + total_maneos_periodo
+
+    count_ventas = len(ventas_en_periodo)
+    count_maneos = len(maneos_en_periodo)
+    count_todas = count_ventas + count_maneos
+
+    # Totales de desglose financiero según tipo_operacion seleccionado
     total_efectivo = Decimal('0')
     total_nequi = Decimal('0')
     total_bancolombia = Decimal('0')
@@ -363,33 +408,79 @@ def historial():
     total_mixto = 0
     total_general = Decimal('0')
 
-    for v in ventas:
-        total_general += v.monto_total
-        if v.pagos:
-            for pago in v.pagos:
-                if pago.metodo_pago == 'efectivo':
-                    total_efectivo += pago.monto
-                elif pago.metodo_pago == 'nequi':
-                    total_nequi += pago.monto
-                elif pago.metodo_pago == 'bancolombia':
-                    total_bancolombia += pago.monto
-                elif pago.metodo_pago == 'daviplata':
-                    total_daviplata += pago.monto
-                elif pago.metodo_pago == 'transferencia':
-                    total_transferencia_legacy += pago.monto
-            if len(v.pagos) > 1:
-                total_mixto += 1
-        else:
-            if v.metodo_pago == 'efectivo':
-                total_efectivo += v.monto_total
-            elif v.metodo_pago == 'nequi':
-                total_nequi += v.monto_total
-            elif v.metodo_pago == 'bancolombia':
-                total_bancolombia += v.monto_total
-            elif v.metodo_pago == 'daviplata':
-                total_daviplata += v.monto_total
-            elif v.metodo_pago == 'transferencia':
-                total_transferencia_legacy += v.monto_total
+    # Sumar Ventas si corresponde
+    if tipo_operacion in ['todas', 'ventas']:
+        for v in ventas_en_periodo:
+            total_general += v.monto_total
+            if v.pagos:
+                for pago in v.pagos:
+                    met = (pago.metodo_pago or 'efectivo').lower()
+                    if met == 'efectivo':
+                        total_efectivo += pago.monto
+                    elif met == 'nequi':
+                        total_nequi += pago.monto
+                    elif met == 'bancolombia':
+                        total_bancolombia += pago.monto
+                    elif met == 'daviplata':
+                        total_daviplata += pago.monto
+                    elif met == 'transferencia':
+                        total_transferencia_legacy += pago.monto
+                if len(v.pagos) > 1:
+                    total_mixto += 1
+            else:
+                met = (v.metodo_pago or 'efectivo').lower()
+                if met == 'efectivo':
+                    total_efectivo += v.monto_total
+                elif met == 'nequi':
+                    total_nequi += v.monto_total
+                elif met == 'bancolombia':
+                    total_bancolombia += v.monto_total
+                elif met == 'daviplata':
+                    total_daviplata += v.monto_total
+                elif met == 'transferencia':
+                    total_transferencia_legacy += v.monto_total
+
+    # Sumar Maneos si corresponde
+    if tipo_operacion in ['todas', 'maneos']:
+        if tipo_operacion == 'maneos':
+            total_general = Decimal('0') # Solo maneos
+        for m in maneos_en_periodo:
+            sub = Decimal(str(m.subtotal_calculado))
+            if tipo_operacion == 'maneos':
+                total_general += sub
+            met = (m.metodo_pago or 'efectivo').lower()
+            if met == 'efectivo':
+                total_efectivo += sub
+            elif met == 'nequi':
+                total_nequi += sub
+            elif met == 'bancolombia':
+                total_bancolombia += sub
+            elif met == 'daviplata':
+                total_daviplata += sub
+            else:
+                total_efectivo += sub
+
+    # Crear lista unificada de operaciones para la vista 'todas'
+    operaciones_unificadas = []
+    if tipo_operacion == 'todas':
+        for v in ventas_en_periodo:
+            operaciones_unificadas.append({
+                'tipo': 'venta',
+                'fecha': v.fecha_venta,
+                'id': v.id,
+                'objeto': v,
+                'monto': v.monto_total
+            })
+        for m in maneos_en_periodo:
+            operaciones_unificadas.append({
+                'tipo': 'maneo',
+                'fecha': m.fecha_resolucion or m.fecha_prestamo or ahora_bogota,
+                'id': m.id,
+                'objeto': m,
+                'monto': Decimal(str(m.subtotal_calculado))
+            })
+        # Ordenar cronológicamente descendente
+        operaciones_unificadas.sort(key=lambda x: x['fecha'], reverse=True)
 
     nombres_meses = {
         1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
@@ -397,7 +488,16 @@ def historial():
     }
 
     return render_template('sales/historial.html', 
-                           ventas=ventas, 
+                           tipo_operacion=tipo_operacion,
+                           ventas=ventas_en_periodo, 
+                           maneos=maneos_en_periodo,
+                           operaciones_unificadas=operaciones_unificadas,
+                           count_ventas=count_ventas,
+                           count_maneos=count_maneos,
+                           count_todas=count_todas,
+                           total_ventas_periodo=total_ventas_periodo,
+                           total_maneos_periodo=total_maneos_periodo,
+                           gran_total_unificado=gran_total_unificado,
                            total_efectivo=total_efectivo,
                            total_nequi=total_nequi,
                            total_bancolombia=total_bancolombia,
@@ -412,6 +512,96 @@ def historial():
                            anio_sel=anio_sel,
                            nombre_mes_sel=nombres_meses.get(mes_sel, ''),
                            q_busqueda=q_busqueda)
+
+
+# Endpoint para Cambiar Vía / Método de Pago de Ventas o Maneos (Soporta Pago Único y Pago Dividido)
+@sales_bp.route('/cambiar_metodo_pago', methods=['POST'])
+@login_required
+@admin_required
+def cambiar_metodo_pago():
+    tipo = request.form.get('tipo', 'venta').strip().lower()  # 'venta' o 'maneo'
+    item_id = request.form.get('id')
+    modalidad_pago = request.form.get('modalidad_pago', 'unico').strip().lower()  # 'unico' o 'dividido'
+    redirect_url = request.form.get('redirect_url')
+
+    try:
+        if tipo == 'maneo':
+            maneo = Maneo.query.get_or_404(item_id)
+            total_operacion = Decimal(str(maneo.subtotal_calculado))
+        else:
+            venta = Sale.query.get_or_404(item_id)
+            total_operacion = Decimal(str(venta.monto_total))
+
+        if modalidad_pago == 'dividido':
+            # Procesar Pago Dividido (Múltiples métodos)
+            pagos_divididos = []
+            monto_efectivo = Decimal(str(request.form.get('monto_efectivo', '0') or 0))
+            monto_nequi = Decimal(str(request.form.get('monto_nequi', '0') or 0))
+            monto_bancolombia = Decimal(str(request.form.get('monto_bancolombia', '0') or 0))
+            monto_daviplata = Decimal(str(request.form.get('monto_daviplata', '0') or 0))
+
+            if monto_efectivo > 0:
+                pagos_divididos.append(('efectivo', monto_efectivo))
+            if monto_nequi > 0:
+                pagos_divididos.append(('nequi', monto_nequi))
+            if monto_bancolombia > 0:
+                pagos_divididos.append(('bancolombia', monto_bancolombia))
+            if monto_daviplata > 0:
+                pagos_divididos.append(('daviplata', monto_daviplata))
+
+            suma_pagos = sum(m for _, m in pagos_divididos)
+            if suma_pagos != total_operacion:
+                flash(f'La suma del pago dividido (${suma_pagos:,.0f}) no coincide con el total (${total_operacion:,.0f}). Diferencia: ${abs(total_operacion - suma_pagos):,.0f}.', 'danger')
+                return redirect(redirect_url or url_for('sales_bp.historial'))
+
+            if tipo == 'maneo':
+                maneo.metodo_pago = 'mixto' if len(pagos_divididos) > 1 else pagos_divididos[0][0]
+                db.session.commit()
+                flash(f'Pago del Maneo #{maneo.id:05d} actualizado a Pago Dividido (${total_operacion:,.0f}) exitosamente.', 'success')
+            else:
+                venta.metodo_pago = 'mixto' if len(pagos_divididos) > 1 else pagos_divididos[0][0]
+                SalePayment.query.filter_by(sale_id=venta.id).delete()
+                for met, monto in pagos_divididos:
+                    pago_obj = SalePayment(
+                        sale_id=venta.id,
+                        metodo_pago=met,
+                        monto=monto
+                    )
+                    db.session.add(pago_obj)
+                db.session.commit()
+                flash(f'Vía de pago del Ticket #{venta.id:05d} actualizada a Pago Dividido exitosamente.', 'success')
+
+        else:
+            # Procesar Pago Único
+            nuevo_metodo = request.form.get('nuevo_metodo', 'efectivo').strip().lower()
+            metodos_validos = ['efectivo', 'nequi', 'bancolombia', 'daviplata']
+            if nuevo_metodo not in metodos_validos:
+                flash(f'Método de pago no válido: {nuevo_metodo}', 'danger')
+                return redirect(redirect_url or url_for('sales_bp.historial'))
+
+            if tipo == 'maneo':
+                maneo.metodo_pago = nuevo_metodo
+                db.session.commit()
+                flash(f'Vía de pago del Maneo #{maneo.id:05d} cambiada a {nuevo_metodo.capitalize()} exitosamente.', 'success')
+            else:
+                venta.metodo_pago = nuevo_metodo
+                SalePayment.query.filter_by(sale_id=venta.id).delete()
+                nuevo_pago = SalePayment(
+                    sale_id=venta.id,
+                    metodo_pago=nuevo_metodo,
+                    monto=venta.monto_total
+                )
+                db.session.add(nuevo_pago)
+                db.session.commit()
+                flash(f'Vía de pago del Ticket #{venta.id:05d} cambiada a {nuevo_metodo.capitalize()} exitosamente.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar el método de pago: {str(e)}', 'danger')
+
+    if redirect_url:
+        return redirect(redirect_url)
+    return redirect(url_for('sales_bp.historial', tipo_operacion=('maneos' if tipo == 'maneo' else 'ventas')))
 
 
 # Endpoint Visor de Ventas del Día para Cajeros (Solo lectura, se resetea cada día)

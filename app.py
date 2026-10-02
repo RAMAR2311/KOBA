@@ -20,6 +20,7 @@ def _asegurar_columnas_db(app):
                 ("maneos", "variant_id", "INTEGER"),
                 ("maneos", "cliente_id", "INTEGER"),
                 ("maneos", "observacion", "TEXT"),
+                ("maneos", "metodo_pago", "VARCHAR(50)"),
                 ("product_variants", "precio_costo", "NUMERIC(10, 2)"),
                 ("product_variants", "precio_minimo", "NUMERIC(10, 2)"),
                 ("product_variants", "precio_sugerido", "NUMERIC(10, 2)"),

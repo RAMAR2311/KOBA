@@ -2,12 +2,46 @@
 
 {% block content %}
 <style>
+    /* Selector de Tipo de Operación (Unificado / Ventas / Maneos) */
+    .operacion-toggle-container {
+        display: inline-flex;
+        background: #f1f5f9;
+        border-radius: 50rem;
+        padding: 4px;
+        gap: 4px;
+        border: 1px solid #e2e8f0;
+    }
+    .operacion-toggle-btn {
+        border-radius: 50rem;
+        padding: 0.45rem 1.15rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .operacion-toggle-btn:hover {
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.6);
+    }
+    .operacion-toggle-btn.active {
+        background: #ffffff;
+        color: var(--brand-primary) !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
     /* Tarjetas de Resumen Financiero con Destellos Koba */
     .hist-kpi-card {
         background: #ffffff;
         border: 1px solid rgba(226, 232, 240, 0.85);
         border-radius: 20px;
-        padding: 1.25rem 1.4rem;
+        padding: 1.15rem 1.3rem;
         display: flex;
         align-items: center;
         position: relative;
@@ -40,15 +74,15 @@
     }
 
     .hist-icon-box {
-        width: 52px;
-        height: 52px;
+        width: 48px;
+        height: 48px;
         border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.35rem;
+        font-size: 1.25rem;
         flex-shrink: 0;
-        margin-right: 1rem;
+        margin-right: 0.9rem;
     }
 
     .hist-kpi-title {
@@ -62,7 +96,7 @@
 
     .hist-kpi-number {
         font-family: 'Outfit', sans-serif;
-        font-size: 1.65rem;
+        font-size: 1.55rem;
         font-weight: 800;
         line-height: 1.1;
         letter-spacing: -0.02em;
@@ -94,7 +128,7 @@
         box-shadow: 0 4px 12px rgba(0, 139, 139, 0.25);
     }
 
-    /* Tabla Compacta de Tickets */
+    /* Tabla Compacta de Operaciones */
     .table-ticket-compact thead th {
         font-size: 0.72rem;
         font-weight: 800;
@@ -117,6 +151,52 @@
         font-size: 0.95rem;
         color: #0f172a;
     }
+
+    /* Estilo de Botones de Acción en una sola fila */
+    .btn-action-compact {
+        height: 30px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-radius: 50rem;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    .btn-action-icon {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        font-size: 0.78rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    /* Tarjetas de Selección de Pago */
+    .payment-option-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #ffffff;
+    }
+    .payment-option-card:hover {
+        border-color: var(--brand-primary);
+        background: #f8fafc;
+    }
+    .payment-option-input:checked + .payment-option-card {
+        border-color: var(--brand-primary);
+        background-color: rgba(0, 139, 139, 0.04);
+        box-shadow: 0 0 0 3px rgba(0, 139, 139, 0.15);
+    }
 </style>
 
 <!-- Cabecera del Módulo -->
@@ -130,11 +210,11 @@
         </h2>
         <p class="text-muted small m-0 mt-1">
             {% if tipo_filtro == 'hoy' %}
-                Mostrando ventas del día de hoy (<strong>{{ fecha_inicio }}</strong>) · {{ ventas|length }} tickets emitidos
+                Mostrando movimientos de hoy (<strong>{{ fecha_inicio }}</strong>) · {{ count_todas if tipo_operacion == 'todas' else (count_ventas if tipo_operacion == 'ventas' else count_maneos) }} operaciones
             {% elif tipo_filtro == 'mes' %}
-                Mostrando ventas del mes de <strong>{{ nombre_mes_sel }} {{ anio_sel }}</strong> · {{ ventas|length }} tickets emitidos
+                Mostrando movimientos de <strong>{{ nombre_mes_sel }} {{ anio_sel }}</strong> · {{ count_todas if tipo_operacion == 'todas' else (count_ventas if tipo_operacion == 'ventas' else count_maneos) }} operaciones
             {% else %}
-                Mostrando ventas del período <strong>{{ fecha_inicio }}</strong> al <strong>{{ fecha_fin }}</strong> · {{ ventas|length }} tickets emitidos
+                Mostrando movimientos del período <strong>{{ fecha_inicio }}</strong> al <strong>{{ fecha_fin }}</strong> · {{ count_todas if tipo_operacion == 'todas' else (count_ventas if tipo_operacion == 'ventas' else count_maneos) }} operaciones
             {% endif %}
         </p>
     </div>
@@ -150,14 +230,57 @@
     </div>
 </div>
 
+<!-- Selector de Modo de Operación: Todo Unificado vs Ventas vs Maneos Cobrados -->
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 d-print-none">
+    <div class="operacion-toggle-container shadow-sm">
+        <!-- 1. Opción Todo Unificado -->
+        <a href="{{ url_for('sales_bp.historial', tipo_operacion='todas', tipo_filtro=tipo_filtro, mes=mes_sel, anio=anio_sel, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, q=q_busqueda) }}" 
+           class="operacion-toggle-btn {% if tipo_operacion == 'todas' %}active{% endif %}">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Todo Unificado</span>
+            <span class="badge {% if tipo_operacion == 'todas' %}bg-primary text-white{% else %}bg-secondary bg-opacity-25 text-dark{% endif %} rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                {{ count_todas }}
+            </span>
+        </a>
+
+        <!-- 2. Opción Solo Ventas -->
+        <a href="{{ url_for('sales_bp.historial', tipo_operacion='ventas', tipo_filtro=tipo_filtro, mes=mes_sel, anio=anio_sel, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, q=q_busqueda) }}" 
+           class="operacion-toggle-btn {% if tipo_operacion == 'ventas' %}active{% endif %}">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Ventas (Tickets)</span>
+            <span class="badge {% if tipo_operacion == 'ventas' %}bg-primary text-white{% else %}bg-secondary bg-opacity-25 text-dark{% endif %} rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                {{ count_ventas }}
+            </span>
+        </a>
+
+        <!-- 3. Opción Solo Maneos Cobrados -->
+        <a href="{{ url_for('sales_bp.historial', tipo_operacion='maneos', tipo_filtro=tipo_filtro, mes=mes_sel, anio=anio_sel, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, q=q_busqueda) }}" 
+           class="operacion-toggle-btn {% if tipo_operacion == 'maneos' %}active{% endif %}">
+            <i class="fa-solid fa-handshake"></i>
+            <span>Maneos Cobrados</span>
+            <span class="badge {% if tipo_operacion == 'maneos' %}bg-primary text-white{% else %}bg-secondary bg-opacity-25 text-dark{% endif %} rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                {{ count_maneos }}
+            </span>
+        </a>
+    </div>
+
+    <!-- Píldora resumen con el Balance Unificado Total -->
+    <div class="d-none d-md-flex align-items-center gap-2 bg-white px-3 py-2 rounded-pill border shadow-sm small">
+        <span class="text-muted fw-bold"><i class="fa-solid fa-scale-balanced text-brand-primary me-1"></i> Totales del Período:</span>
+        <span class="badge bg-light text-dark border fw-bold px-2 py-1">Ventas: ${{ (total_ventas_periodo)|cop }}</span>
+        <span class="badge bg-light text-dark border fw-bold px-2 py-1">Maneos: ${{ (total_maneos_periodo)|cop }}</span>
+        <span class="badge bg-primary text-white fw-bold px-2 py-1">Total: ${{ (gran_total_unificado)|cop }}</span>
+    </div>
+</div>
+
 <!-- Barra de Filtros Rápidos (Hoy / Mes / Rango de Fechas) -->
 <div class="card card-custom p-3 mb-4 border-0 shadow-sm bg-white d-print-none">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
-        <!-- Píldoras de Selección de Modo -->
+        <!-- Píldoras de Selección de Período -->
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="small fw-bold text-muted me-1"><i class="fa-solid fa-filter text-brand-primary me-1"></i> Período:</span>
             
-            <a href="{{ url_for('sales_bp.historial', tipo_filtro='hoy') }}" class="filter-pill-btn {% if tipo_filtro == 'hoy' %}active{% endif %}">
+            <a href="{{ url_for('sales_bp.historial', tipo_operacion=tipo_operacion, tipo_filtro='hoy') }}" class="filter-pill-btn {% if tipo_filtro == 'hoy' %}active{% endif %}">
                 <i class="fa-solid fa-calendar-day"></i> Hoy
             </a>
 
@@ -170,9 +293,10 @@
             </button>
         </div>
 
-        <!-- Buscador por número de ticket -->
-        <div class="w-100 w-lg-auto" style="min-width: 260px;">
+        <!-- Buscador -->
+        <div class="w-100 w-lg-auto" style="min-width: 290px;">
             <form method="GET" action="{{ url_for('sales_bp.historial') }}" class="m-0">
+                <input type="hidden" name="tipo_operacion" value="{{ tipo_operacion }}">
                 <input type="hidden" name="tipo_filtro" value="{{ tipo_filtro }}">
                 {% if tipo_filtro == 'mes' %}
                     <input type="hidden" name="mes" value="{{ mes_sel }}">
@@ -183,11 +307,13 @@
                 {% endif %}
                 <div class="input-group input-group-sm rounded-pill border bg-light overflow-hidden shadow-sm">
                     <span class="input-group-text bg-transparent border-0 ps-3 text-muted">
-                        <i class="fa-solid fa-receipt"></i>
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </span>
-                    <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar Ticket # (ej: 155)..." value="{{ q_busqueda or '' }}">
+                    <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none" 
+                           placeholder="Buscar por #, local o producto..." 
+                           value="{{ q_busqueda or '' }}">
                     {% if q_busqueda %}
-                    <a href="{{ url_for('sales_bp.historial', tipo_filtro=tipo_filtro) }}" class="btn btn-transparent border-0 text-muted px-2" title="Limpiar">
+                    <a href="{{ url_for('sales_bp.historial', tipo_operacion=tipo_operacion, tipo_filtro=tipo_filtro) }}" class="btn btn-transparent border-0 text-muted px-2" title="Limpiar">
                         <i class="fa-solid fa-xmark"></i>
                     </a>
                     {% endif %}
@@ -200,6 +326,7 @@
     <!-- Panel Desplegable: Selector de Mes -->
     <div class="collapse {% if tipo_filtro == 'mes' %}show{% endif %} mt-3 pt-3 border-top" id="collapseFiltroMes">
         <form method="GET" action="{{ url_for('sales_bp.historial') }}" class="d-flex flex-wrap align-items-center gap-2">
+            <input type="hidden" name="tipo_operacion" value="{{ tipo_operacion }}">
             <input type="hidden" name="tipo_filtro" value="mes">
             <span class="small fw-bold text-brand-black">Selecciona Mes y Año:</span>
             <select name="mes" class="form-select form-select-sm rounded-pill fw-bold border bg-light px-3 py-1" style="width: auto;">
@@ -231,6 +358,7 @@
     <!-- Panel Desplegable: Selector de Rango -->
     <div class="collapse {% if tipo_filtro == 'rango' %}show{% endif %} mt-3 pt-3 border-top" id="collapseFiltroRango">
         <form method="GET" action="{{ url_for('sales_bp.historial') }}" class="row align-items-end g-2">
+            <input type="hidden" name="tipo_operacion" value="{{ tipo_operacion }}">
             <input type="hidden" name="tipo_filtro" value="rango">
             <div class="col-sm-4 col-md-3">
                 <label class="form-label fw-bold text-brand-black small mb-1">Fecha Desde</label>
@@ -258,9 +386,25 @@
                 <i class="fa-solid fa-sack-dollar"></i>
             </div>
             <div>
-                <span class="hist-kpi-title d-block">Total Recaudado</span>
+                <span class="hist-kpi-title d-block">
+                    {% if tipo_operacion == 'todas' %}
+                        Total Unificado
+                    {% elif tipo_operacion == 'ventas' %}
+                        Total Ventas Caja
+                    {% else %}
+                        Total Maneos Cobrados
+                    {% endif %}
+                </span>
                 <h3 class="hist-kpi-number text-brand-black m-0">${{ (total_general)|cop }}</h3>
-                <small class="text-muted" style="font-size: 0.75rem;">{{ ventas|length }} ventas en período</small>
+                <small class="text-muted" style="font-size: 0.75rem;">
+                    {% if tipo_operacion == 'todas' %}
+                        {{ count_todas }} operaciones unificadas
+                    {% elif tipo_operacion == 'ventas' %}
+                        {{ count_ventas }} tickets emitidos
+                    {% else %}
+                        {{ count_maneos }} maneos cobrados
+                    {% endif %}
+                </small>
             </div>
         </div>
     </div>
@@ -322,134 +466,783 @@
     </div>
 </div>
 
-<!-- TABLA DE OPERACIONES Y TICKETS (COMPACTA Y ELEGANTE) -->
+
+<!-- ========================================================================= -->
+<!-- TABLA PRINCIPAL DE OPERACIONES (UNIFICADA / VENTAS / MANEOS) -->
+<!-- ========================================================================= -->
 <div class="card card-custom p-0 overflow-hidden border-0 shadow-sm bg-white">
     <div class="table-responsive">
         <table class="table table-hover table-ticket-compact mb-0 align-middle">
             <thead class="bg-light">
                 <tr>
-                    <th class="ps-4" width="130">N° TIPO</th>
-                    <th width="190">FECHA DE COBRO</th>
-                    <th>VENDEDOR RESPONSABLE</th>
+                    <th class="ps-4" width="160">N° OPERACIÓN</th>
+                    <th width="180">FECHA DE COBRO</th>
+                    <th>RESPONSABLE / LOCAL</th>
                     <th class="text-center" width="170">VÍA DE PAGO</th>
                     <th class="text-end" width="150">IMPORTE CERRADO</th>
-                    <th class="text-center pe-4" width="180">ACCIONES</th>
+                    <th class="text-end pe-4" style="min-width: 220px; width: 220px;">ACCIONES</th>
                 </tr>
             </thead>
             <tbody>
-                {% for venta in ventas %}
-                <tr>
-                    <td class="ps-4">
-                        <span class="ticket-id-badge">
-                            <i class="fa-solid fa-receipt text-brand-primary me-1" style="font-size: 0.85rem;"></i>
-                            Ticket #{{ "%05d"|format(venta.id) }}
-                        </span>
-                    </td>
-                    <td class="text-muted small">
-                        <i class="fa-regular fa-calendar me-1 text-muted"></i>
-                        {{ venta.fecha_venta.strftime('%Y-%m-%d') }} <span class="text-muted opacity-75">a las {{ venta.fecha_venta.strftime('%H:%M') }}</span>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border text-muted" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <span class="fw-semibold text-brand-black small">{{ venta.vendedor.nombre }}</span>
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        {% if venta.pagos|length > 1 %}
-                            <span class="badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-3 py-1 fw-bold" 
-                                  data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="left"
-                                  title="{% for p in venta.pagos %}{{ p.metodo_pago|capitalize }}: ${{ (p.monto)|cop }}{% if not loop.last %}&lt;br&gt;{% endif %}{% endfor %}"
-                                  style="cursor: help; font-size: 0.78rem;">
-                                <i class="fa-solid fa-arrows-split-up-and-left me-1 text-warning-emphasis"></i> Pago Mixto
-                            </span>
-                        {% elif venta.pagos|length == 1 %}
-                            {% set metodo = venta.pagos[0].metodo_pago %}
-                            {% if metodo == 'efectivo' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
-                                    <i class="fa-solid fa-money-bills me-1"></i> Efectivo
-                                </span>
-                            {% elif metodo == 'nequi' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f3e8ff; color: #9333ea; border: 1px solid #d8b4fe; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-mobile-screen-button me-1"></i> Nequi
-                                </span>
-                            {% elif metodo == 'bancolombia' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-building-columns me-1"></i> Bancolombia
-                                </span>
-                            {% elif metodo == 'daviplata' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-wallet me-1"></i> Daviplata
-                                </span>
-                            {% else %}
-                                <span class="badge bg-light text-primary border rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
-                                    <i class="fa-solid fa-credit-card me-1"></i> {{ metodo|capitalize }}
-                                </span>
-                            {% endif %}
+                {% if tipo_operacion == 'todas' %}
+                    <!-- VISTA UNIFICADA -->
+                    {% for op in operaciones_unificadas %}
+                        {% if op.tipo == 'venta' %}
+                            {% set venta = op.objeto %}
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="badge bg-info bg-opacity-10 text-dark border border-info rounded-pill px-2 py-1 me-1 small">
+                                        <i class="fa-solid fa-receipt text-brand-primary me-1"></i> Venta
+                                    </span>
+                                    <span class="ticket-id-badge">#{{ "%05d"|format(venta.id) }}</span>
+                                </td>
+                                <td class="text-muted small">
+                                    <i class="fa-regular fa-calendar me-1 text-muted"></i>
+                                    {{ venta.fecha_venta.strftime('%Y-%m-%d') }} <span class="text-muted opacity-75">{{ venta.fecha_venta.strftime('%H:%M') }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border text-muted" style="width: 26px; height: 26px; font-size: 0.72rem;">
+                                            <i class="fa-solid fa-user"></i>
+                                        </div>
+                                        <span class="fw-semibold text-brand-black small">{{ venta.vendedor.nombre }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem;">
+                                        {{ venta.metodo_pago_display }}
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem;">
+                                    ${{ (venta.monto_total)|cop }}
+                                </td>
+                                <td class="text-end pe-4 text-nowrap">
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+                                        <!-- Botón Detalles -->
+                                        <button type="button" class="btn btn-sm btn-light border btn-action-compact text-brand-black shadow-sm" 
+                                                data-bs-toggle="modal" data-bs-target="#modalDetalleVenta{{ venta.id }}" title="Ver detalles en esta pantalla">
+                                            <i class="fa-solid fa-eye text-brand-primary"></i> <span>Detalles</span>
+                                        </button>
+
+                                        <!-- Botón Recibo -->
+                                        <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=venta.id) }}" target="_blank" class="btn btn-sm btn-blue btn-action-compact shadow-sm" title="Imprimir Ticket">
+                                            <i class="fa-solid fa-receipt"></i> <span>Recibo</span>
+                                        </a>
+
+                                        <!-- Botón Cambiar Pago -->
+                                        <button type="button" class="btn btn-sm btn-outline-secondary btn-action-icon shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCambiarPagoVenta{{ venta.id }}" title="Cambiar o Dividir Pago">
+                                            <i class="fa-solid fa-pencil"></i>
+                                        </button>
+
+                                        <!-- Botón Anular Venta (Admin) -->
+                                        {% if current_user.rol == 'admin' %}
+                                        <form action="{{ url_for('sales_bp.eliminar_venta', sale_id=venta.id) }}" method="POST" onsubmit="return confirm('¿Anular esta venta y devolver stock?');" class="d-inline m-0">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-action-icon shadow-sm" title="Anular venta">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
                         {% else %}
-                            {% if venta.metodo_pago == 'efectivo' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
-                                    <i class="fa-solid fa-money-bills me-1"></i> Efectivo
-                                </span>
-                            {% elif venta.metodo_pago == 'nequi' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f3e8ff; color: #9333ea; border: 1px solid #d8b4fe; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-mobile-screen-button me-1"></i> Nequi
-                                </span>
-                            {% elif venta.metodo_pago == 'bancolombia' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-building-columns me-1"></i> Bancolombia
-                                </span>
-                            {% elif venta.metodo_pago == 'daviplata' %}
-                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.78rem;">
-                                    <i class="fa-solid fa-wallet me-1"></i> Daviplata
-                                </span>
-                            {% else %}
-                                <span class="badge bg-light text-primary border rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
-                                    <i class="fa-solid fa-credit-card me-1"></i> {{ venta.metodo_pago|capitalize }}
-                                </span>
-                            {% endif %}
+                            {% set m = op.objeto %}
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="badge rounded-pill px-2 py-1 me-1 small" style="background-color: #f3e8ff; color: #9333ea; border: 1px solid #d8b4fe;">
+                                        <i class="fa-solid fa-handshake me-1"></i> Maneo
+                                    </span>
+                                    <span class="ticket-id-badge">#{{ "%05d"|format(m.id) }}</span>
+                                </td>
+                                <td class="text-muted small">
+                                    <i class="fa-regular fa-calendar me-1 text-muted"></i>
+                                    {% if m.fecha_resolucion %}
+                                        {{ m.fecha_resolucion.strftime('%Y-%m-%d') }} <span class="text-muted opacity-75">{{ m.fecha_resolucion.strftime('%H:%M') }}</span>
+                                    {% else %}
+                                        {{ m.fecha_prestamo.strftime('%Y-%m-%d') }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border text-muted" style="width: 26px; height: 26px; font-size: 0.72rem;">
+                                            <i class="fa-solid fa-store"></i>
+                                        </div>
+                                        <div>
+                                            <span class="fw-semibold text-brand-black small">{{ m.nombre_cliente_o_local }}</span>
+                                            <span class="text-muted small d-block" style="font-size: 0.72rem;">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem;">
+                                        {{ (m.metodo_pago or 'Efectivo')|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem;">
+                                    ${{ (m.subtotal_calculado)|cop }}
+                                </td>
+                                <td class="text-end pe-4 text-nowrap">
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+                                        <!-- Botón Detalles -->
+                                        <button type="button" class="btn btn-sm btn-light border btn-action-compact text-brand-black shadow-sm" 
+                                                data-bs-toggle="modal" data-bs-target="#modalDetalleManeo{{ m.id }}" title="Ver detalles del maneo">
+                                            <i class="fa-solid fa-eye text-brand-primary"></i> <span>Detalles</span>
+                                        </button>
+
+                                        <!-- Botón Cambiar Pago -->
+                                        <button type="button" class="btn btn-sm btn-outline-secondary btn-action-compact shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCambiarPagoManeo{{ m.id }}" title="Cambiar o Dividir Pago">
+                                            <i class="fa-solid fa-pencil"></i> <span>Editar Pago</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         {% endif %}
-                    </td>
-                    <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem;">
-                        ${{ (venta.monto_total)|cop }}
-                    </td>
-                    <td class="text-center pe-4">
-                        <div class="d-flex justify-content-center align-items-center gap-1">
-                            <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=venta.id) }}" target="_blank" class="btn btn-sm btn-blue rounded-pill px-3 py-1 fw-bold shadow-sm d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;">
-                                <i class="fa-solid fa-receipt"></i>
-                                <span>Ver Recibo</span>
-                            </a>
-                            
-                            {% if current_user.rol == 'admin' %}
-                            <form action="{{ url_for('sales_bp.eliminar_venta', sale_id=venta.id) }}" method="POST" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de anular esta venta? Esta acción retornará el stock de los productos vendidos.');" class="d-inline m-0">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle d-inline-flex align-items-center justify-content-center p-0" style="width: 28px; height: 28px;" title="Anular venta">
-                                    <i class="fa-solid fa-trash" style="font-size: 0.75rem;"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">
-                        <div class="py-4">
-                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-                                <i class="fa-solid fa-cash-register fs-2 text-muted opacity-50"></i>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="fa-solid fa-box-open fs-2 mb-3 text-muted opacity-50"></i>
+                                    <h5 class="fw-bold text-brand-black mb-1">No hay operaciones registradas en este período</h5>
+                                    <p class="text-muted small mb-0">Selecciona otro rango de fechas o emite nuevas ventas desde el menú principal.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+
+                {% elif tipo_operacion == 'ventas' %}
+                    <!-- VISTA SOLO VENTAS -->
+                    {% for venta in ventas %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="ticket-id-badge">
+                                <i class="fa-solid fa-receipt text-brand-primary me-1" style="font-size: 0.85rem;"></i>
+                                Ticket #{{ "%05d"|format(venta.id) }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">
+                            <i class="fa-regular fa-calendar me-1 text-muted"></i>
+                            {{ venta.fecha_venta.strftime('%Y-%m-%d') }} <span class="text-muted opacity-75">a las {{ venta.fecha_venta.strftime('%H:%M') }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border text-muted" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <span class="fw-semibold text-brand-black small">{{ venta.vendedor.nombre }}</span>
                             </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem;">
+                                {{ venta.metodo_pago_display }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem;">
+                            ${{ (venta.monto_total)|cop }}
+                        </td>
+                        <td class="text-end pe-4 text-nowrap">
+                            <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+                                <button type="button" class="btn btn-sm btn-light border btn-action-compact text-brand-black shadow-sm" 
+                                        data-bs-toggle="modal" data-bs-target="#modalDetalleVenta{{ venta.id }}" title="Ver detalles en esta pantalla">
+                                    <i class="fa-solid fa-eye text-brand-primary"></i> <span>Detalles</span>
+                                </button>
+
+                                <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=venta.id) }}" target="_blank" class="btn btn-sm btn-blue btn-action-compact shadow-sm" title="Imprimir Ticket">
+                                    <i class="fa-solid fa-receipt"></i> <span>Recibo</span>
+                                </a>
+
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-action-icon shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCambiarPagoVenta{{ venta.id }}" title="Cambiar o Dividir Pago">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </button>
+
+                                {% if current_user.rol == 'admin' %}
+                                <form action="{{ url_for('sales_bp.eliminar_venta', sale_id=venta.id) }}" method="POST" onsubmit="return confirm('¿Anular esta venta y retornar stock?');" class="d-inline m-0">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action-icon shadow-sm" title="Anular venta">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <h5 class="fw-bold text-brand-black mb-1">No se encontraron ventas en este período</h5>
-                            <p class="text-muted small mb-0">Cambia el filtro de fechas o emite una nueva venta desde la Caja Registradora.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
+                            <p class="text-muted small mb-0">Cambia el filtro de fechas para ver registros anteriores.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                {% else %}
+                    <!-- VISTA SOLO MANEOS COBRADOS -->
+                    {% for m in maneos %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="ticket-id-badge">
+                                <i class="fa-solid fa-handshake text-brand-primary me-1" style="font-size: 0.85rem;"></i>
+                                Maneo #{{ "%05d"|format(m.id) }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">
+                            <i class="fa-regular fa-calendar me-1 text-muted"></i>
+                            {% if m.fecha_resolucion %}
+                                {{ m.fecha_resolucion.strftime('%Y-%m-%d') }} <span class="text-muted opacity-75">{{ m.fecha_resolucion.strftime('%H:%M') }}</span>
+                            {% else %}
+                                {{ m.fecha_prestamo.strftime('%Y-%m-%d') }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border text-muted" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    <i class="fa-solid fa-store"></i>
+                                </div>
+                                <div>
+                                    <span class="fw-semibold text-brand-black small">{{ m.nombre_cliente_o_local }}</span>
+                                    <span class="text-muted small d-block" style="font-size: 0.72rem;">{{ m.cantidad }}x {{ m.producto.nombre }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-1 fw-bold" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.75rem;">
+                                {{ (m.metodo_pago or 'Efectivo')|capitalize }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem;">
+                            ${{ (m.subtotal_calculado)|cop }}
+                        </td>
+                        <td class="text-end pe-4 text-nowrap">
+                            <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+                                <button type="button" class="btn btn-sm btn-light border btn-action-compact text-brand-black shadow-sm" 
+                                        data-bs-toggle="modal" data-bs-target="#modalDetalleManeo{{ m.id }}" title="Ver detalles del maneo cobrado">
+                                    <i class="fa-solid fa-eye text-brand-primary"></i> <span>Detalles</span>
+                                </button>
+
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-action-compact shadow-sm" 
+                                        data-bs-toggle="modal" data-bs-target="#modalCambiarPagoManeo{{ m.id }}" title="Cambiar o Dividir Pago">
+                                    <i class="fa-solid fa-pencil"></i> <span>Editar Pago</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <h5 class="fw-bold text-brand-black mb-1">No se encontraron maneos cobrados en este período</h5>
+                            <p class="text-muted small mb-0">Los maneos aparecerán aquí automáticamente al momento de facturarlos.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
 </div>
+
+
+<!-- ========================================================================= -->
+<!-- MODALES DE DETALLE Y EDICIÓN DE PAGO (ÚNICO Y DIVIDIDO) PARA TODAS LAS VENTAS -->
+<!-- ========================================================================= -->
+{% for venta in ventas %}
+<!-- Modal Detalle Venta -->
+<div class="modal fade text-start" id="modalDetalleVenta{{ venta.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--brand-primary) 0%, #006666 100%);">
+                        <i class="fa-solid fa-receipt fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0">Detalle de Venta #{{ "%05d"|format(venta.id) }}</h5>
+                        <small class="text-muted"><i class="fa-regular fa-calendar me-1"></i>{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Vendedor / Cajero</small>
+                            <span class="fw-bold text-brand-black">{{ venta.vendedor.nombre }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Vía de Pago</small>
+                            <span class="fw-bold text-brand-primary">{{ venta.metodo_pago_display }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Importe Total</small>
+                            <span class="fw-bold text-success fs-5" style="font-family: 'Outfit', sans-serif;">${{ (venta.monto_total)|cop }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Artículos -->
+                <div class="card border rounded-3 overflow-hidden mb-3">
+                    <div class="card-header bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                        <span class="fw-bold small text-brand-black"><i class="fa-solid fa-boxes-stacked text-brand-primary me-1"></i> Artículos Vendidos</span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill">{{ venta.detalles|length }} producto(s)</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="bg-light small text-muted text-uppercase" style="font-size: 0.72rem;">
+                                <tr>
+                                    <th class="ps-3" width="70">Cant</th>
+                                    <th>Concepto / Producto</th>
+                                    <th>SKU / Referencia</th>
+                                    <th class="text-end" width="130">Precio Unit.</th>
+                                    <th class="text-end pe-3" width="140">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for det in venta.detalles %}
+                                <tr>
+                                    <td class="ps-3 fw-bold text-brand-primary">{{ det.cantidad_vendida }}</td>
+                                    <td>
+                                        {% if det.nombre_manual %}
+                                            <div class="fw-bold text-brand-black">{{ det.nombre_manual }}</div>
+                                            <span class="badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-2 py-0" style="font-size: 0.7rem;">Producto Externo</span>
+                                        {% else %}
+                                            <div class="fw-bold text-brand-black">{{ det.producto.nombre }}</div>
+                                            {% if det.variante %}
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill px-2 py-0" style="font-size: 0.7rem;">
+                                                    <i class="fa-solid fa-code-branch me-1"></i>{{ det.variante.nombre_variante }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">{{ det.producto.sku if det.producto else 'N/A' }}</td>
+                                    <td class="text-end small">${{ (det.precio_venta_final)|cop }}</td>
+                                    <td class="text-end pe-3 fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif;">
+                                        ${{ (det.precio_venta_final * det.cantidad_vendida)|cop }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {% if venta.pagos|length > 1 %}
+                <div class="p-3 bg-light rounded-3 border mb-2">
+                    <small class="text-muted d-block fw-bold text-uppercase mb-2" style="font-size: 0.72rem;">
+                        <i class="fa-solid fa-arrows-split-up-and-left me-1 text-warning-emphasis"></i> Desglose de Pagos Mixtos:
+                    </small>
+                    <div class="row g-2">
+                        {% for pago in venta.pagos %}
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded-2 border">
+                                <span class="fw-semibold text-capitalize small">{{ pago.metodo_pago }}:</span>
+                                <span class="fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif;">${{ (pago.monto)|cop }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold shadow-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalCambiarPagoVenta{{ venta.id }}">
+                    <i class="fa-solid fa-pencil me-1"></i> Cambiar / Dividir Pago
+                </button>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=venta.id) }}" target="_blank" class="btn btn-blue rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="fa-solid fa-receipt me-1"></i> Recibo Térmico
+                    </a>
+                    <button type="button" class="btn btn-light border rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar / Dividir Pago Venta -->
+<div class="modal fade text-start" id="modalCambiarPagoVenta{{ venta.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 36px; height: 36px; background-color: var(--brand-primary);">
+                        <i class="fa-solid fa-wallet fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0">Editar Método de Pago</h5>
+                        <small class="text-muted">Ticket #{{ "%05d"|format(venta.id) }} · Total: ${{ (venta.monto_total)|cop }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            
+            <form action="{{ url_for('sales_bp.cambiar_metodo_pago') }}" method="POST" id="formPagoVenta{{ venta.id }}" onsubmit="return validarPagoDividido('{{ venta.id }}', {{ venta.monto_total }});">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="tipo" value="venta">
+                <input type="hidden" name="id" value="{{ venta.id }}">
+                <input type="hidden" name="redirect_url" value="{{ request.url }}">
+
+                <div class="modal-body p-4">
+                    <!-- Pestañas de Modalidad de Pago (Único vs Dividido) -->
+                    <ul class="nav nav-pills nav-fill mb-3 p-1 bg-light rounded-pill border" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill fw-bold small py-1" id="tabUnicoVenta{{ venta.id }}" data-bs-toggle="pill" data-bs-target="#contentUnicoVenta{{ venta.id }}" type="button" onclick="document.getElementById('modalidadVenta{{ venta.id }}').value='unico'">
+                                <i class="fa-solid fa-money-bill me-1"></i> Pago Único
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill fw-bold small py-1" id="tabDivididoVenta{{ venta.id }}" data-bs-toggle="pill" data-bs-target="#contentDivididoVenta{{ venta.id }}" type="button" onclick="document.getElementById('modalidadVenta{{ venta.id }}').value='dividido'">
+                                <i class="fa-solid fa-arrows-split-up-and-left me-1"></i> Dividir Pago
+                            </button>
+                        </li>
+                    </ul>
+                    <input type="hidden" name="modalidad_pago" id="modalidadVenta{{ venta.id }}" value="unico">
+
+                    <div class="tab-content">
+                        <!-- Pestaña: Pago Único -->
+                        <div class="tab-pane fade show active" id="contentUnicoVenta{{ venta.id }}">
+                            <p class="small text-muted mb-2">Selecciona la vía de pago completa:</p>
+                            <div class="d-flex flex-column gap-2">
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="efectivo" class="d-none payment-option-input" {% if venta.metodo_pago == 'efectivo' or (venta.pagos|length == 1 and venta.pagos[0].metodo_pago == 'efectivo') %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-money-bills text-success fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Efectivo</span>
+                                        </div>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">Caja Física</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="nequi" class="d-none payment-option-input" {% if venta.metodo_pago == 'nequi' or (venta.pagos|length == 1 and venta.pagos[0].metodo_pago == 'nequi') %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-mobile-screen-button fs-5" style="color: #9333ea;"></i>
+                                            <span class="fw-bold text-brand-black small">Nequi</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #f3e8ff; color: #9333ea;">Digital</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="bancolombia" class="d-none payment-option-input" {% if venta.metodo_pago == 'bancolombia' or (venta.pagos|length == 1 and venta.pagos[0].metodo_pago == 'bancolombia') %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-building-columns text-warning fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Bancolombia</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #fef3c7; color: #d97706;">Transferencia</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="daviplata" class="d-none payment-option-input" {% if venta.metodo_pago == 'daviplata' or (venta.pagos|length == 1 and venta.pagos[0].metodo_pago == 'daviplata') %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-wallet text-danger fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Daviplata</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #fee2e2; color: #dc2626;">Digital</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Pestaña: Pago Dividido -->
+                        <div class="tab-pane fade" id="contentDivididoVenta{{ venta.id }}">
+                            <div class="alert alert-info py-2 px-3 small rounded-3 mb-3 border-0 d-flex justify-content-between align-items-center">
+                                <span>Total a cubrir: <strong class="fs-6">${{ (venta.monto_total)|cop }}</strong></span>
+                                <span id="badgeEstadoDividido{{ venta.id }}" class="badge bg-warning text-dark">Pendiente</span>
+                            </div>
+
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-money-bills text-success me-1"></i>Efectivo ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-{{ venta.id }}" name="monto_efectivo" placeholder="0" oninput="calcularTotalDividido('{{ venta.id }}', {{ venta.monto_total }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-mobile-screen-button text-purple me-1" style="color: #9333ea;"></i>Nequi ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-{{ venta.id }}" name="monto_nequi" placeholder="0" oninput="calcularTotalDividido('{{ venta.id }}', {{ venta.monto_total }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-building-columns text-warning me-1"></i>Bancolombia ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-{{ venta.id }}" name="monto_bancolombia" placeholder="0" oninput="calcularTotalDividido('{{ venta.id }}', {{ venta.monto_total }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-wallet text-danger me-1"></i>Daviplata ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-{{ venta.id }}" name="monto_daviplata" placeholder="0" oninput="calcularTotalDividido('{{ venta.id }}', {{ venta.monto_total }})">
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2 text-end">
+                                <small class="text-muted fw-bold" id="sumaDivididaLabel{{ venta.id }}">Suma: $0 / Restante: ${{ (venta.monto_total)|cop }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+<!-- ========================================================================= -->
+<!-- MODALES DE DETALLE Y EDICIÓN DE PAGO (ÚNICO Y DIVIDIDO) PARA MANEOS -->
+<!-- ========================================================================= -->
+{% for m in maneos %}
+<!-- Modal Detalle Maneo Cobrado -->
+<div class="modal fade text-start" id="modalDetalleManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--brand-primary) 0%, #006666 100%);">
+                        <i class="fa-solid fa-handshake fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0">Detalle de Maneo #{{ "%05d"|format(m.id) }} (Cobrado)</h5>
+                        <small class="text-muted"><i class="fa-solid fa-check-circle text-success me-1"></i>Liquidado exitosamente</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Local / Cliente</small>
+                            <span class="fw-bold text-brand-black">{{ m.nombre_cliente_o_local }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Vía de Pago</small>
+                            <span class="fw-bold text-brand-primary">{{ (m.metodo_pago or 'Efectivo')|capitalize }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Total Cobrado</small>
+                            <span class="fw-bold text-success fs-5" style="font-family: 'Outfit', sans-serif;">${{ (m.subtotal_calculado)|cop }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border rounded-3 overflow-hidden mb-3">
+                    <div class="card-header bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                        <span class="fw-bold small text-brand-black"><i class="fa-solid fa-box text-brand-primary me-1"></i> Mercancía Liquidada</span>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill">Estado: Cobrado</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="bg-light small text-muted text-uppercase" style="font-size: 0.72rem;">
+                                <tr>
+                                    <th class="ps-3" width="80">Cantidad</th>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th class="text-end" width="140">Precio Unitario</th>
+                                    <th class="text-end pe-3" width="140">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="ps-3 fw-bold text-brand-primary fs-6">{{ m.cantidad }} uds</td>
+                                    <td>
+                                        <div class="fw-bold text-brand-black">{{ m.producto.nombre }}</div>
+                                        {% if m.variante %}
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border rounded-pill px-2 py-0" style="font-size: 0.7rem;">
+                                                <i class="fa-solid fa-code-branch me-1"></i>{{ m.variante.nombre_variante }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">{{ m.producto.sku }}</td>
+                                    <td class="text-end small fw-semibold">${{ (m.valor_unitario_calculado)|cop }}</td>
+                                    <td class="text-end pe-3 fw-bold text-brand-black" style="font-family: 'Outfit', sans-serif;">${{ (m.subtotal_calculado)|cop }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha de Préstamo</small>
+                            <span class="fw-semibold text-brand-black small">{{ m.fecha_prestamo.strftime('%d/%m/%Y %H:%M') if m.fecha_prestamo else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha de Cobro / Resolución</small>
+                            <span class="fw-semibold text-brand-black small">{{ m.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if m.fecha_resolucion else 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border">
+                    <small class="text-muted d-block fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Observaciones:</small>
+                    <p class="mb-0 text-brand-black small">{{ m.observacion or 'Sin observaciones adicionales.' }}</p>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold shadow-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalCambiarPagoManeo{{ m.id }}">
+                    <i class="fa-solid fa-pencil me-1"></i> Cambiar / Dividir Pago
+                </button>
+                <button type="button" class="btn btn-light border rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar / Dividir Pago Maneo -->
+<div class="modal fade text-start" id="modalCambiarPagoManeo{{ m.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 36px; height: 36px; background-color: var(--brand-primary);">
+                        <i class="fa-solid fa-wallet fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0">Editar Método de Pago</h5>
+                        <small class="text-muted">Maneo #{{ "%05d"|format(m.id) }} · Total: ${{ (m.subtotal_calculado)|cop }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            
+            <form action="{{ url_for('sales_bp.cambiar_metodo_pago') }}" method="POST" id="formPagoManeo{{ m.id }}" onsubmit="return validarPagoDividido('m_{{ m.id }}', {{ m.subtotal_calculado }});">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="tipo" value="maneo">
+                <input type="hidden" name="id" value="{{ m.id }}">
+                <input type="hidden" name="redirect_url" value="{{ request.url }}">
+
+                <div class="modal-body p-4">
+                    <ul class="nav nav-pills nav-fill mb-3 p-1 bg-light rounded-pill border" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill fw-bold small py-1" id="tabUnicoManeo{{ m.id }}" data-bs-toggle="pill" data-bs-target="#contentUnicoManeo{{ m.id }}" type="button" onclick="document.getElementById('modalidadManeo{{ m.id }}').value='unico'">
+                                <i class="fa-solid fa-money-bill me-1"></i> Pago Único
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill fw-bold small py-1" id="tabDivididoManeo{{ m.id }}" data-bs-toggle="pill" data-bs-target="#contentDivididoManeo{{ m.id }}" type="button" onclick="document.getElementById('modalidadManeo{{ m.id }}').value='dividido'">
+                                <i class="fa-solid fa-arrows-split-up-and-left me-1"></i> Dividir Pago
+                            </button>
+                        </li>
+                    </ul>
+                    <input type="hidden" name="modalidad_pago" id="modalidadManeo{{ m.id }}" value="unico">
+
+                    <div class="tab-content">
+                        <!-- Pestaña: Pago Único -->
+                        <div class="tab-pane fade show active" id="contentUnicoManeo{{ m.id }}">
+                            {% set actual_metodo_m = (m.metodo_pago or 'efectivo')|lower %}
+                            <div class="d-flex flex-column gap-2">
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="efectivo" class="d-none payment-option-input" {% if actual_metodo_m == 'efectivo' %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-money-bills text-success fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Efectivo</span>
+                                        </div>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">Caja Física</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="nequi" class="d-none payment-option-input" {% if actual_metodo_m == 'nequi' %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-mobile-screen-button fs-5" style="color: #9333ea;"></i>
+                                            <span class="fw-bold text-brand-black small">Nequi</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #f3e8ff; color: #9333ea;">Digital</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="bancolombia" class="d-none payment-option-input" {% if actual_metodo_m == 'bancolombia' %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-building-columns text-warning fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Bancolombia</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #fef3c7; color: #d97706;">Transferencia</span>
+                                    </div>
+                                </label>
+
+                                <label class="position-relative">
+                                    <input type="radio" name="nuevo_metodo" value="daviplata" class="d-none payment-option-input" {% if actual_metodo_m == 'daviplata' %}checked{% endif %}>
+                                    <div class="payment-option-card d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-wallet text-danger fs-5"></i>
+                                            <span class="fw-bold text-brand-black small">Daviplata</span>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-1 small" style="background-color: #fee2e2; color: #dc2626;">Digital</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Pestaña: Pago Dividido -->
+                        <div class="tab-pane fade" id="contentDivididoManeo{{ m.id }}">
+                            <div class="alert alert-info py-2 px-3 small rounded-3 mb-3 border-0 d-flex justify-content-between align-items-center">
+                                <span>Total a cubrir: <strong class="fs-6">${{ (m.subtotal_calculado)|cop }}</strong></span>
+                                <span id="badgeEstadoDivididom_{{ m.id }}" class="badge bg-warning text-dark">Pendiente</span>
+                            </div>
+
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-money-bills text-success me-1"></i>Efectivo ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-m_{{ m.id }}" name="monto_efectivo" placeholder="0" oninput="calcularTotalDividido('m_{{ m.id }}', {{ m.subtotal_calculado }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-mobile-screen-button text-purple me-1" style="color: #9333ea;"></i>Nequi ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-m_{{ m.id }}" name="monto_nequi" placeholder="0" oninput="calcularTotalDividido('m_{{ m.id }}', {{ m.subtotal_calculado }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-building-columns text-warning me-1"></i>Bancolombia ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-m_{{ m.id }}" name="monto_bancolombia" placeholder="0" oninput="calcularTotalDividido('m_{{ m.id }}', {{ m.subtotal_calculado }})">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold small mb-1"><i class="fa-solid fa-wallet text-danger me-1"></i>Daviplata ($)</label>
+                                    <input type="number" step="100" min="0" class="form-control form-control-sm input-dividido-m_{{ m.id }}" name="monto_daviplata" placeholder="0" oninput="calcularTotalDividido('m_{{ m.id }}', {{ m.subtotal_calculado }})">
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2 text-end">
+                                <small class="text-muted fw-bold" id="sumaDivididaLabelm_{{ m.id }}">Suma: $0 / Restante: ${{ (m.subtotal_calculado)|cop }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-blue rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -458,5 +1251,52 @@
             return new bootstrap.Tooltip(el);
         });
     });
+
+    // Función para calcular y validar pago dividido en tiempo real
+    function calcularTotalDividido(id, totalEsperado) {
+        const inputs = document.querySelectorAll('.input-dividido-' + id);
+        let suma = 0;
+        inputs.forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            suma += val;
+        });
+
+        const label = document.getElementById('sumaDivididaLabel' + id);
+        const badge = document.getElementById('badgeEstadoDividido' + id);
+        const restante = totalEsperado - suma;
+
+        if (label) {
+            label.textContent = 'Suma: $' + suma.toLocaleString('es-CO') + ' / ' + (restante >= 0 ? 'Restante: $' + restante.toLocaleString('es-CO') : 'Excedido: $' + Math.abs(restante).toLocaleString('es-CO'));
+        }
+
+        if (badge) {
+            if (Math.abs(restante) < 0.01) {
+                badge.className = 'badge bg-success text-white';
+                badge.textContent = '✓ Correcto ($' + totalEsperado.toLocaleString('es-CO') + ')';
+            } else if (restante > 0) {
+                badge.className = 'badge bg-warning text-dark';
+                badge.textContent = 'Faltan $' + restante.toLocaleString('es-CO');
+            } else {
+                badge.className = 'badge bg-danger text-white';
+                badge.textContent = 'Excede por $' + Math.abs(restante).toLocaleString('es-CO');
+            }
+        }
+    }
+
+    function validarPagoDividido(id, totalEsperado) {
+        const modalidadInput = document.getElementById('modalidadVenta' + id) || document.getElementById('modalidadManeo' + id.replace('m_', ''));
+        if (modalidadInput && modalidadInput.value === 'dividido') {
+            const inputs = document.querySelectorAll('.input-dividido-' + id);
+            let suma = 0;
+            inputs.forEach(input => {
+                suma += parseFloat(input.value) || 0;
+            });
+            if (Math.abs(totalEsperado - suma) > 0.01) {
+                alert('La suma de los medios ingresados ($' + suma.toLocaleString('es-CO') + ') debe ser exactamente igual al total de la operación ($' + totalEsperado.toLocaleString('es-CO') + ').');
+                return false;
+            }
+        }
+        return true;
+    }
 </script>
 {% endblock %}

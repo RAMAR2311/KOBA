@@ -458,6 +458,7 @@ def maneos_facturar(id):
             maneo.cantidad = cantidad_vendida
 
         metodo_pago_seleccionado = request.form.get('metodo_pago', 'efectivo')
+        maneo.metodo_pago = metodo_pago_seleccionado
         
         # Registrar la venta real del Maneo
         nueva_venta = Sale(

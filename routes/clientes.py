@@ -336,6 +336,7 @@ def cobro_seleccionados(id):
             )
             db.session.add(detalle)
             m.estado = 'FACTURADO'
+            m.metodo_pago = metodo_principal
             m.fecha_resolucion = hora_actual
 
         for p in pagos_list:
@@ -403,6 +404,7 @@ def cobro_total(id):
             db.session.add(detalle)
 
             m.estado = 'FACTURADO'
+            m.metodo_pago = metodo_principal
             m.fecha_resolucion = hora_actual
 
         for p in pagos_list:

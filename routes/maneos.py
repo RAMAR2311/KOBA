@@ -148,6 +148,7 @@ def facturar(id):
 
     # Actualizar estado del Maneo
     maneo.estado = 'FACTURADO'
+    maneo.metodo_pago = metodo_pago
     maneo.fecha_resolucion = obtener_hora_bogota()
 
     try:

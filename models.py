@@ -223,6 +223,7 @@ class Maneo(db.Model):
     cantidad = db.Column(db.Integer, nullable=False)
     valor_fijo = db.Column(db.Numeric(10, 2), nullable=True) # Valor fijo asignado manualmente
     estado = db.Column(db.String(50), nullable=False, default='PENDIENTE') # PENDIENTE, FACTURADO, DEVUELTO
+    metodo_pago = db.Column(db.String(50), nullable=True, default='efectivo') # efectivo, nequi, bancolombia, daviplata
     observacion = db.Column(db.Text, nullable=True) # Notas u observaciones previas al realizar el maneo
     fecha_prestamo = db.Column(db.DateTime, default=obtener_hora_bogota)
     fecha_resolucion = db.Column(db.DateTime, nullable=True)
