@@ -16,6 +16,7 @@ def index():
     tipo = 'bodega' if current_user.rol == 'bodega' else 'tienda'
     page = request.args.get('page', 1, type=int)
     q = request.args.get('q', '').strip()
+    filtro = request.args.get('filtro', '').strip()
     per_page = 20
 
     base_query = Product.query.options(db.selectinload(Product.variantes)).filter_by(tipo_inventario=tipo)
@@ -29,6 +30,15 @@ def index():
                 Product.variantes.any(ProductVariant.nombre_variante.ilike(f'%{q}%'))
             )
         )
+
+    if filtro == 'bajo_stock':
+        from sqlalchemy import or_, and_
+        base_query = base_query.filter(
+            or_(
+                and_(~Product.variantes.any(), Product.cantidad_stock <= 10),
+                Product.variantes.any(ProductVariant.cantidad_stock <= 10)
+            )
+        ).distinct()
 
     # Paginación del listado principal
     paginacion = base_query.order_by(Product.nombre).paginate(
@@ -69,7 +79,8 @@ def index():
         valor_costo=valor_costo,
         valor_sugerido=valor_sugerido,
         total_unidades_fisicas=total_unidades_fisicas,
-        q=q
+        q=q,
+        filtro=filtro
     )
 
 @inventory_bp.route('/nuevo', methods=['GET', 'POST'])

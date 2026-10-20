@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Cliente, Maneo, Product, ProductVariant, Sale, SaleDetail, SalePayment, obtener_hora_bogota
+from models import db, Cliente, Maneo, Product, ProductVariant, Sale, SaleDetail, SalePayment, AbonoCliente, obtener_hora_bogota
+from decimal import Decimal
 
 clientes_bp = Blueprint('clientes_bp', __name__)
 
@@ -427,4 +428,165 @@ def cobro_total(id):
         flash(f'Error al procesar el cobro total: {str(e)}', 'danger')
 
     return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+ 
+@clientes_bp.route('/<int:id>/abono', methods=['POST'])
+@login_required
+def registrar_abono(id):
+    """
+    Registra un abono de dinero a la cuenta del cliente/local.
+    Aplica el abono bajo criterio FIFO (los maneos/artículos más antiguos se cubren primero).
+    Permite abonos parciales sobre artículos individuales y registra la transacción en Caja.
+    """
+    cliente = Cliente.query.get_or_404(id)
+    maneos_activos = Maneo.query.filter_by(cliente_id=cliente.id, estado='PENDIENTE').order_by(Maneo.fecha_prestamo.asc(), Maneo.id.asc()).all()
+
+    if not maneos_activos:
+        flash(f'"{cliente.nombre_o_razon_social}" no tiene deudas ni maneos pendientes.', 'info')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    saldo_total_pendiente = sum(Decimal(str(m.saldo_pendiente_calculado)) for m in maneos_activos)
+    if saldo_total_pendiente <= Decimal('0'):
+        flash(f'"{cliente.nombre_o_razon_social}" se encuentra al día.', 'info')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    # Parsear y validar monto del abono
+    monto_raw = request.form.get('monto_abono', '0').replace('$', '').replace('.', '').replace(',', '').strip() or '0'
+    try:
+        monto_abono = Decimal(monto_raw)
+    except Exception:
+        flash('El monto de abono ingresado no es válido.', 'danger')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    if monto_abono <= Decimal('0'):
+        flash('El monto de abono debe ser mayor a $0.', 'warning')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    if monto_abono > saldo_total_pendiente:
+        flash(f'El monto del abono (${monto_abono:,.0f}) supera la deuda total pendiente (${saldo_total_pendiente:,.0f}).', 'warning')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    tipo_pago = request.form.get('tipo_pago', 'unico')
+    notas = request.form.get('notas_abono', '').strip()
+    imprimir_ticket = bool(request.form.get('imprimir_ticket'))
+    hora_actual = obtener_hora_bogota()
+
+    metodo_principal, pagos_list, error_msg = _procesar_pagos_venta(tipo_pago, monto_abono, request.form)
+    if error_msg:
+        flash(error_msg, 'danger')
+        if request.form.get('origen') == 'directorio':
+            return redirect(url_for('clientes_bp.index'))
+        return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
+    try:
+        # 1. Registrar venta en Caja para registrar el ingreso real del dinero
+        nueva_venta = Sale(
+            vendedor_id=current_user.id,
+            monto_total=monto_abono,
+            metodo_pago=metodo_principal,
+            fecha_venta=hora_actual
+        )
+        db.session.add(nueva_venta)
+        db.session.flush()
+
+        for p in pagos_list:
+            pago_obj = SalePayment(
+                sale_id=nueva_venta.id,
+                metodo_pago=p['metodo'],
+                monto=p['monto']
+            )
+            db.session.add(pago_obj)
+
+        # 2. Registrar el Abono en la tabla histórica de abonos
+        abono_record = AbonoCliente(
+            cliente_id=cliente.id,
+            usuario_id=current_user.id,
+            sale_id=nueva_venta.id,
+            monto=monto_abono,
+            metodo_pago=metodo_principal,
+            notas=notas if notas else None,
+            fecha_abono=hora_actual
+        )
+        db.session.add(abono_record)
+
+        # 3. Aplicar criterio FIFO a los maneos (desde el más antiguo)
+        monto_restante = Decimal(str(monto_abono))
+        articulos_liquidados = 0
+        articulos_abonados_parcial = 0
+
+        for m in maneos_activos:
+            if monto_restante <= Decimal('0'):
+                break
+
+            saldo_m = Decimal(str(m.saldo_pendiente_calculado))
+            if saldo_m <= Decimal('0'):
+                continue
+
+            if monto_restante >= saldo_m:
+                # Se liquida este maneo completamente
+                monto_aplicado = saldo_m
+                m.abono_acumulado = Decimal(str(m.subtotal_calculado))
+                m.estado = 'FACTURADO'
+                m.metodo_pago = metodo_principal
+                m.fecha_resolucion = hora_actual
+                monto_restante -= monto_aplicado
+                articulos_liquidados += 1
+
+                detalle = SaleDetail(
+                    sale_id=nueva_venta.id,
+                    product_id=m.product_id,
+                    variant_id=m.variant_id,
+                    cantidad_vendida=max(1, m.cantidad),
+                    precio_venta_final=float(monto_aplicado) / max(1, m.cantidad),
+                    nombre_manual=f"{m.producto.nombre} (Liquidado con abono FIFO - {cliente.nombre_o_razon_social})"
+                )
+                db.session.add(detalle)
+            else:
+                # Abono parcial al maneo (permanece activo)
+                monto_aplicado = monto_restante
+                m.abono_acumulado = Decimal(str(m.abono_acumulado or 0)) + monto_aplicado
+                monto_restante = Decimal('0')
+                articulos_abonados_parcial += 1
+
+                detalle = SaleDetail(
+                    sale_id=nueva_venta.id,
+                    product_id=m.product_id,
+                    variant_id=m.variant_id,
+                    cantidad_vendida=1,
+                    precio_venta_final=float(monto_aplicado),
+                    nombre_manual=f"Abono parcial a: {m.producto.nombre} ({cliente.nombre_o_razon_social})"
+                )
+                db.session.add(detalle)
+
+        db.session.commit()
+
+        resumen_txt = []
+        if articulos_liquidados > 0:
+            resumen_txt.append(f"{articulos_liquidados} producto(s) saldado(s) totalmente")
+        if articulos_abonados_parcial > 0:
+            resumen_txt.append(f"{articulos_abonados_parcial} con abono parcial activo")
+        detalle_str = f" ({', '.join(resumen_txt)})" if resumen_txt else ""
+
+        flash(f'¡Abono de ${monto_abono:,.0f} registrado exitosamente!{detalle_str}. Saldo pendiente restante: ${cliente.saldo_maneos_pendiente:,.0f}.', 'success')
+
+        if imprimir_ticket:
+            return redirect(url_for('sales_bp.imprimir_ticket', sale_id=nueva_venta.id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al registrar el abono: {str(e)}', 'danger')
+
+    if request.form.get('origen') == 'directorio':
+        return redirect(url_for('clientes_bp.index'))
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+
 

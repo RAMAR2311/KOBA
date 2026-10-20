@@ -222,6 +222,7 @@ class Maneo(db.Model):
     local_vecino = db.Column(db.String(150), nullable=False) # Nombre para histórico o compatibilidad
     cantidad = db.Column(db.Integer, nullable=False)
     valor_fijo = db.Column(db.Numeric(10, 2), nullable=True) # Valor fijo asignado manualmente
+    abono_acumulado = db.Column(db.Numeric(10, 2), nullable=False, default=0.0) # Monto acumulado en abonos parciales
     estado = db.Column(db.String(50), nullable=False, default='PENDIENTE') # PENDIENTE, FACTURADO, DEVUELTO
     metodo_pago = db.Column(db.String(50), nullable=True, default='efectivo') # efectivo, nequi, bancolombia, daviplata
     observacion = db.Column(db.Text, nullable=True) # Notas u observaciones previas al realizar el maneo
@@ -252,6 +253,14 @@ class Maneo(db.Model):
     @property
     def subtotal_calculado(self):
         return self.cantidad * self.valor_unitario_calculado
+
+    @property
+    def abono_calculado(self):
+        return float(self.abono_acumulado or 0.0)
+
+    @property
+    def saldo_pendiente_calculado(self):
+        return max(0.0, float(self.subtotal_calculado) - self.abono_calculado)
 
 class Expense(db.Model):
     __tablename__ = 'expenses'
@@ -287,6 +296,7 @@ class Cliente(db.Model):
 
     facturas = db.relationship('FacturaBodega', backref='cliente', lazy=True)
     abonos = db.relationship('AbonoBodega', backref='cliente', lazy=True)
+    abonos_recibidos = db.relationship('AbonoCliente', backref='cliente', lazy=True, cascade="all, delete-orphan", order_by="desc(AbonoCliente.fecha_abono)")
 
     def __init__(self, **kwargs):
         super(Cliente, self).__init__(**kwargs)
@@ -297,7 +307,7 @@ class Cliente(db.Model):
 
     @property
     def saldo_maneos_pendiente(self):
-        return sum(m.subtotal_calculado for m in self.maneos if m.estado == 'PENDIENTE')
+        return sum(m.saldo_pendiente_calculado for m in self.maneos if m.estado == 'PENDIENTE')
 
     @property
     def unidades_maneos_pendientes(self):
@@ -309,7 +319,9 @@ class Cliente(db.Model):
 
     @property
     def total_historico_cobrado(self):
-        return sum(m.subtotal_calculado for m in self.maneos if m.estado == 'FACTURADO')
+        total_liquidado = sum(m.subtotal_calculado for m in self.maneos if m.estado == 'FACTURADO')
+        total_abonos_pendientes = sum(m.abono_calculado for m in self.maneos if m.estado == 'PENDIENTE')
+        return total_liquidado + total_abonos_pendientes
 
     @property
     def total_historico_devuelto(self):
@@ -440,4 +452,23 @@ class ServerPayment(db.Model):
 
     def __init__(self, **kwargs):
         super(ServerPayment, self).__init__(**kwargs)
+
+class AbonoCliente(db.Model):
+    """Registro histórico de abonos parciales realizados por un cliente/local a su deuda de maneos."""
+    __tablename__ = 'abonos_cliente'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sale_id = db.Column(db.Integer, db.ForeignKey('sales.id'), nullable=True)
+    monto = db.Column(db.Numeric(10, 2), nullable=False)
+    metodo_pago = db.Column(db.String(50), nullable=False, default='efectivo')
+    notas = db.Column(db.Text, nullable=True)
+    fecha_abono = db.Column(db.DateTime, default=obtener_hora_bogota)
+
+    usuario = db.relationship('User', backref='abonos_cliente_registrados', lazy=True)
+    venta = db.relationship('Sale', backref='abono_cliente_rel', lazy=True)
+
+    def __init__(self, **kwargs):
+        super(AbonoCliente, self).__init__(**kwargs)
 

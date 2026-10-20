@@ -52,6 +52,10 @@
             <span>Imprimir</span>
         </button>
         {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+            <button type="button" class="btn btn-warning text-dark rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalRegistrarAbono">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+                <span>Registrar Abono</span>
+            </button>
             <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
                 <i class="fa-solid fa-cash-register"></i>
                 <span>Cobro Total (${{ '{:,.0f}'.format(saldo_pendiente) }})</span>
@@ -100,8 +104,11 @@
                 </small>
             </div>
             {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
-                <div class="mt-3 pt-2 border-top">
-                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
+                <div class="mt-3 pt-2 border-top d-flex flex-column gap-2">
+                    <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarAbono">
+                        <i class="fa-solid fa-hand-holding-dollar me-1"></i> Registrar Abono
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCobroTotal">
                         <i class="fa-solid fa-cash-register me-1"></i> Cobrar Todo (${{ '{:,.0f}'.format(saldo_pendiente) }})
                     </button>
                 </div>
@@ -174,9 +181,18 @@
                     <span class="badge bg-secondary bg-opacity-25 text-dark border rounded-pill ms-1">{{ maneos_historial|length }}</span>
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-4 fw-bold tab-koba-pill" id="abonos-tab" data-bs-toggle="tab" data-bs-target="#tab-abonos" type="button" role="tab">
+                    <i class="fa-solid fa-hand-holding-dollar me-1"></i> Abonos Realizados
+                    <span class="badge bg-info bg-opacity-25 text-dark border rounded-pill ms-1 fw-bold">{{ cliente.abonos_recibidos|length }}</span>
+                </button>
+            </li>
         </ul>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+                <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarAbono">
+                    <i class="fa-solid fa-hand-holding-dollar me-1"></i> Registrar Abono
+                </button>
                 <!-- Botón dinámico para Cobro de Seleccionados (se activa al marcar productos) -->
                 <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold shadow-sm d-none animate__animated animate__fadeIn" id="btnCobrarSeleccionadosHeader" data-bs-toggle="modal" data-bs-target="#modalCobroSeleccionados">
                     <i class="fa-solid fa-cash-register me-1"></i> Cobrar Seleccionados (<span id="txtBadgeSelCount">0</span> · <span id="txtBadgeSelTotal">$0</span>)
@@ -218,7 +234,7 @@
                                     data-sku="{{ m.producto.sku|e }}" 
                                     data-cant="{{ m.cantidad }}" 
                                     data-pu="{{ m.valor_unitario_calculado }}" 
-                                    data-subtotal="{{ m.subtotal_calculado }}" 
+                                    data-subtotal="{{ m.saldo_pendiente_calculado }}" 
                                     style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
                             </td>
                             <td class="small text-muted">
@@ -255,7 +271,13 @@
                                 ${{ '{:,.0f}'.format(m.valor_unitario_calculado) }}
                             </td>
                             <td class="text-end fw-bold text-danger fs-6" style="font-family: 'Outfit', sans-serif;">
-                                ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
+                                {% if m.abono_calculado > 0 %}
+                                    <div class="text-danger fw-extrabold">${{ '{:,.0f}'.format(m.saldo_pendiente_calculado) }}</div>
+                                    <div style="font-size: 0.73rem;" class="text-muted text-decoration-line-through">Orig: ${{ '{:,.0f}'.format(m.subtotal_calculado) }}</div>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2 py-0" style="font-size: 0.68rem;">Abonado: ${{ '{:,.0f}'.format(m.abono_calculado) }}</span>
+                                {% else %}
+                                    ${{ '{:,.0f}'.format(m.subtotal_calculado) }}
+                                {% endif %}
                             </td>
                             <td class="text-center pe-4">
                                 <div class="d-flex justify-content-center gap-2">
@@ -360,6 +382,68 @@
                                 <div class="py-4">
                                     <i class="fa-solid fa-clock-rotate-left fs-2 text-muted opacity-50 mb-2"></i>
                                     <p class="mb-0 fw-semibold text-brand-black">No hay movimientos resueltos registrados para este cliente.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+
+        <!-- PESTAÑA 3: HISTORIAL DE ABONOS REALIZADOS -->
+        <div class="tab-pane fade p-0" id="tab-abonos" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover table-custom mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">FECHA Y HORA</th>
+                            <th class="text-end">MONTO ABONADO</th>
+                            <th class="text-center">MÉTODO DE PAGO</th>
+                            <th>REGISTRADO POR</th>
+                            <th>OBSERVACIÓN / NOTAS</th>
+                            <th class="text-center pe-4">COMPROBANTE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in cliente.abonos_recibidos %}
+                        <tr>
+                            <td class="ps-4 small text-muted">
+                                <div class="fw-bold text-brand-black">{{ a.fecha_abono.strftime('%d/%m/%Y') }}</div>
+                                <div style="font-size:0.75rem;">{{ a.fecha_abono.strftime('%H:%M') }}</div>
+                            </td>
+                            <td class="text-end fw-bold text-success fs-6" style="font-family: 'Outfit', sans-serif;">
+                                +${{ '{:,.0f}'.format(a.monto) }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border rounded-pill px-3 py-1">
+                                    <i class="fa-solid fa-money-bill-wave me-1 text-success"></i>{{ a.metodo_pago|capitalize }}
+                                </span>
+                            </td>
+                            <td class="small fw-semibold text-brand-black">
+                                <i class="fa-solid fa-user-circle text-muted me-1"></i>{{ a.usuario.nombre if a.usuario else 'Sistema' }}
+                            </td>
+                            <td class="small text-muted">
+                                {{ a.notas or '—' }}
+                            </td>
+                            <td class="text-center pe-4">
+                                {% if a.sale_id %}
+                                    <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=a.sale_id) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1 fw-bold shadow-sm" title="Imprimir Comprobante / Ticket">
+                                        <i class="fa-solid fa-receipt me-1"></i> Ticket
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 56px; height: 56px;">
+                                        <i class="fa-solid fa-hand-holding-dollar fs-3 text-muted opacity-50"></i>
+                                    </div>
+                                    <p class="mb-0 fw-semibold text-brand-black">No se han registrado abonos parciales para este cliente.</p>
+                                    <small class="text-muted">Los abonos que ingreses quedarán guardados aquí con fecha, método de pago y comprobante.</small>
                                 </div>
                             </td>
                         </tr>
@@ -774,6 +858,165 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 {% if saldo_pendiente > 0 and maneos_activos|length > 0 %}
+<!-- Modal de Registrar Abono a Cuenta (Criterio FIFO) -->
+<div class="modal fade" id="modalRegistrarAbono" tabindex="-1" aria-labelledby="modalRegistrarAbonoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px;">
+                        <i class="fa-solid fa-hand-holding-dollar fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalRegistrarAbonoLabel">
+                            Registrar Abono a Cuenta
+                        </h5>
+                        <small class="text-muted">Abono a deuda de maneos para <strong>{{ cliente.nombre_o_razon_social }}</strong></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="POST" id="formRegistrarAbono" action="{{ url_for('clientes_bp.registrar_abono', id=cliente.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="tipo_pago" id="inputTipoPagoAbono" value="unico">
+
+                <div class="modal-body p-4">
+                    <!-- Resumen del Saldo Actual -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded-3 border">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Deuda Actual Pendiente</span>
+                            <span class="fs-6 fw-semibold text-brand-black">{{ maneos_activos|length }} productos prestados</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Saldo Total</span>
+                            <span class="fs-3 fw-bold text-danger" style="font-family: 'Outfit', sans-serif;">${{ '{:,.0f}'.format(saldo_pendiente) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Explicación FIFO amigable -->
+                    <div class="alert alert-info py-2 px-3 small border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background-color: #f0fdf4; color: #166534; border-left: 4px solid #16a34a !important;">
+                        <i class="fa-solid fa-circle-info fs-5 flex-shrink-0 text-success"></i>
+                        <span><strong>Regla de Cobro FIFO:</strong> Este abono saldará automáticamente los productos <strong>más antiguos primero</strong>. Si el monto cubre solo una fracción de un artículo, quedará guardado como abono parcial sin sacarlo de la cuenta.</span>
+                    </div>
+
+                    <!-- Input Monto de Abono -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black d-flex justify-content-between align-items-center">
+                            <span>Monto a Abonar ($ COP) <span class="text-danger">*</span></span>
+                            <small class="text-muted">Máx: ${{ '{:,.0f}'.format(saldo_pendiente) }}</small>
+                        </label>
+                        <div class="input-group input-group-lg border rounded-3 overflow-hidden shadow-sm">
+                            <span class="input-group-text bg-white border-0 text-success fw-bold">$</span>
+                            <input type="number" 
+                                   name="monto_abono" 
+                                   id="inputMontoAbono" 
+                                   class="form-control border-0 fw-bold fs-4 text-success shadow-none" 
+                                   placeholder="0" 
+                                   min="1" 
+                                   max="{{ saldo_pendiente }}" 
+                                   required>
+                        </div>
+                        <!-- Botones rápidos de monto -->
+                        <div class="d-flex gap-2 flex-wrap mt-2">
+                            {% for valor in [10000, 20000, 50000, 100000] %}
+                                {% if valor <= saldo_pendiente %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 btn-quick-abono" data-monto="{{ valor }}">
+                                        +${{ '{:,.0f}'.format(valor) }}
+                                    </button>
+                                {% endif %}
+                            {% endfor %}
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 btn-quick-abono fw-bold" data-monto="{{ saldo_pendiente|int }}">
+                                Todo (${{ '{:,.0f}'.format(saldo_pendiente) }})
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selector Tipo de Pago: Único vs Dividido -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black d-block mb-2">Forma de Pago <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100 p-1 bg-light rounded-3 border" role="group">
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoAbono" id="radioPagoUnicoAbono" autocomplete="off" checked>
+                            <label class="btn btn-outline-warning text-dark border-0 rounded-2 fw-bold py-2" for="radioPagoUnicoAbono">
+                                <i class="fa-solid fa-wallet me-1"></i> Pago Único (1 Método)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="btnRadioTipoPagoAbono" id="radioPagoDivididoAbono" autocomplete="off">
+                            <label class="btn btn-outline-warning text-dark border-0 rounded-2 fw-bold py-2" for="radioPagoDivididoAbono">
+                                <i class="fa-solid fa-layer-group me-1"></i> Pago Dividido (2 Métodos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Panel Pago Único -->
+                    <div id="panelPagoUnicoAbono" class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Método de Pago</label>
+                        <select name="metodo_pago" class="form-select bg-light border py-2">
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Nequi</option>
+                            <option value="daviplata">📱 Daviplata</option>
+                            <option value="bancolombia">🏦 Bancolombia</option>
+                            <option value="tarjeta">💳 Tarjeta / Datáfono</option>
+                            <option value="transferencia">🔄 Transferencia Bancaria</option>
+                        </select>
+                    </div>
+
+                    <!-- Panel Pago Dividido -->
+                    <div id="panelPagoDivididoAbono" class="d-none mb-3 p-3 bg-light rounded-3 border">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small text-muted">Método 1</label>
+                                <select name="metodo_pago_1" class="form-select border py-2">
+                                    <option value="efectivo">💵 Efectivo</option>
+                                    <option value="nequi">📱 Nequi</option>
+                                    <option value="daviplata">📱 Daviplata</option>
+                                    <option value="bancolombia">🏦 Bancolombia</option>
+                                    <option value="tarjeta">💳 Tarjeta</option>
+                                    <option value="transferencia">🔄 Transferencia</option>
+                                </select>
+                                <input type="number" name="monto_1" id="inputMonto1Abono" class="form-control mt-2 border fw-bold text-success" placeholder="Monto 1">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small text-muted">Método 2</label>
+                                <select name="metodo_pago_2" class="form-select border py-2">
+                                    <option value="nequi" selected>📱 Nequi</option>
+                                    <option value="efectivo">💵 Efectivo</option>
+                                    <option value="daviplata">📱 Daviplata</option>
+                                    <option value="bancolombia">🏦 Bancolombia</option>
+                                    <option value="tarjeta">💳 Tarjeta</option>
+                                    <option value="transferencia">🔄 Transferencia</option>
+                                </select>
+                                <input type="number" name="monto_2" id="inputMonto2Abono" class="form-control mt-2 border fw-bold text-success" placeholder="Monto 2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notas del Abono -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Notas / Observación (Opcional)</label>
+                        <input type="text" name="notas_abono" class="form-control bg-light border py-2" placeholder="Ej: Abono en efectivo dejado por el encargado...">
+                    </div>
+
+                    <!-- Opción imprimir ticket -->
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="imprimir_ticket" id="checkImprimirTicketAbono">
+                        <label class="form-check-label fw-semibold text-brand-black small" for="checkImprimirTicketAbono">
+                            Imprimir comprobante / ticket térmico de abono
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnSubmitAbono" class="btn btn-warning text-dark rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Abono (<span id="txtBtnConfirmarAbono">$0</span>)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Cobro Total de Todos los Maneos Activos -->
 <div class="modal fade" id="modalCobroTotal" tabindex="-1" aria-labelledby="modalCobroTotalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -1240,6 +1483,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         inputMonto2.addEventListener('input', validarBalance);
+    }
+
+    // --- LÓGICA MODAL REGISTRAR ABONO ---
+    const inputMontoAbono = document.getElementById('inputMontoAbono');
+    const txtBtnConfirmarAbono = document.getElementById('txtBtnConfirmarAbono');
+    const radioPagoUnicoAbono = document.getElementById('radioPagoUnicoAbono');
+    const radioPagoDivididoAbono = document.getElementById('radioPagoDivididoAbono');
+    const panelPagoUnicoAbono = document.getElementById('panelPagoUnicoAbono');
+    const panelPagoDivididoAbono = document.getElementById('panelPagoDivididoAbono');
+    const inputTipoPagoAbono = document.getElementById('inputTipoPagoAbono');
+    const inputMonto1Abono = document.getElementById('inputMonto1Abono');
+    const inputMonto2Abono = document.getElementById('inputMonto2Abono');
+
+    if (inputMontoAbono) {
+        function actualizarTextoBotonAbono() {
+            const val = parseFloat(inputMontoAbono.value) || 0;
+            if (txtBtnConfirmarAbono) {
+                txtBtnConfirmarAbono.textContent = formatearDinero(val);
+            }
+            if (radioPagoDivididoAbono && radioPagoDivididoAbono.checked) {
+                const mitad = Math.floor(val / 2);
+                if (inputMonto1Abono) inputMonto1Abono.value = mitad;
+                if (inputMonto2Abono) inputMonto2Abono.value = val - mitad;
+            }
+        }
+
+        inputMontoAbono.addEventListener('input', actualizarTextoBotonAbono);
+
+        document.querySelectorAll('.btn-quick-abono').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const m = this.getAttribute('data-monto');
+                inputMontoAbono.value = m;
+                actualizarTextoBotonAbono();
+            });
+        });
+
+        if (radioPagoUnicoAbono && radioPagoDivididoAbono) {
+            radioPagoUnicoAbono.addEventListener('change', function() {
+                if (this.checked) {
+                    panelPagoUnicoAbono.classList.remove('d-none');
+                    panelPagoDivididoAbono.classList.add('d-none');
+                    inputTipoPagoAbono.value = 'unico';
+                }
+            });
+
+            radioPagoDivididoAbono.addEventListener('change', function() {
+                if (this.checked) {
+                    panelPagoUnicoAbono.classList.add('d-none');
+                    panelPagoDivididoAbono.classList.remove('d-none');
+                    inputTipoPagoAbono.value = 'dividido';
+                    actualizarTextoBotonAbono();
+                }
+            });
+        }
     }
 });
 </script>

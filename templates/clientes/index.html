@@ -209,6 +209,12 @@
                     </td>
                     <td class="text-center pe-4">
                         <div class="d-flex justify-content-center align-items-center gap-1">
+                            {% if c.saldo_maneos_pendiente > 0 %}
+                            <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalAbonoDirectorio{{ c.id }}" title="Registrar Abono a la deuda">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                                <span>Abonar</span>
+                            </button>
+                            {% endif %}
                             <a href="{{ url_for('clientes_bp.estado_cuenta', id=c.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" title="Ver Estado de Cuenta Completo">
                                 <i class="fa-solid fa-file-invoice-dollar text-brand-primary"></i>
                                 <span>Estado Cuenta</span>
@@ -247,6 +253,100 @@
         </table>
     </div>
 </div>
+
+<!-- Modales de Abono Rápido para Directorio -->
+{% for c in clientes %}
+{% if c.saldo_maneos_pendiente > 0 %}
+<div class="modal fade text-start" id="modalAbonoDirectorio{{ c.id }}" tabindex="-1" aria-labelledby="modalAbonoDirectorioLabel{{ c.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                        <i class="fa-solid fa-hand-holding-dollar fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-brand-black mb-0" id="modalAbonoDirectorioLabel{{ c.id }}">
+                            Registrar Abono
+                        </h5>
+                        <small class="text-muted">{{ c.nombre_o_razon_social }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="{{ url_for('clientes_bp.registrar_abono', id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="origen" value="directorio">
+                <input type="hidden" name="tipo_pago" value="unico">
+
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded-3 border">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Deuda Actual</span>
+                            <span class="small fw-semibold text-brand-black">{{ c.maneos_activos|length }} productos prestados</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small text-uppercase fw-bold d-block" style="font-size: 0.72rem;">Saldo Pendiente</span>
+                            <span class="fs-4 fw-bold text-danger" style="font-family: 'Outfit', sans-serif;">${{ '{:,.0f}'.format(c.saldo_maneos_pendiente) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small border-0 rounded-3 mb-3 d-flex align-items-center gap-2" style="background-color: #f0fdf4; color: #166534;">
+                        <i class="fa-solid fa-circle-info fs-6 flex-shrink-0 text-success"></i>
+                        <span>El abono saldará automáticamente los productos <strong>más antiguos primero (FIFO)</strong>.</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black small">Monto a Abonar ($ COP) <span class="text-danger">*</span></label>
+                        <div class="input-group input-group-lg border rounded-3 overflow-hidden shadow-sm">
+                            <span class="input-group-text bg-white border-0 text-success fw-bold">$</span>
+                            <input type="number" 
+                                   name="monto_abono" 
+                                   class="form-control border-0 fw-bold fs-4 text-success shadow-none" 
+                                   placeholder="0" 
+                                   min="1" 
+                                   max="{{ c.saldo_maneos_pendiente }}" 
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black small">Método de Pago</label>
+                        <select name="metodo_pago" class="form-select bg-light border py-2">
+                            <option value="efectivo">💵 Efectivo directo a Caja</option>
+                            <option value="nequi">📱 Nequi</option>
+                            <option value="daviplata">📱 Daviplata</option>
+                            <option value="bancolombia">🏦 Bancolombia</option>
+                            <option value="tarjeta">💳 Tarjeta / Datáfono</option>
+                            <option value="transferencia">🔄 Transferencia Bancaria</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-brand-black small">Notas / Observación (Opcional)</label>
+                        <input type="text" name="notas_abono" class="form-control bg-light border py-2" placeholder="Ej: Pago parcial recibido...">
+                    </div>
+
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="imprimir_ticket" id="checkTicketDir{{ c.id }}">
+                        <label class="form-check-label fw-semibold text-brand-black small" for="checkTicketDir{{ c.id }}">
+                            Imprimir comprobante / ticket
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Abono
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 
 <style>
 .kpi-koba-card {

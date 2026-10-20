@@ -13,6 +13,7 @@ def main():
         # 2. Columnas añadidas a los modelos que necesitan existir en PostgreSQL / SQLite
         columnas_def = [
             ("maneos", "valor_fijo", "NUMERIC(10, 2)"),
+            ("maneos", "abono_acumulado", "NUMERIC(10, 2) DEFAULT 0.0"),
             ("maneos", "variant_id", "INTEGER"),
             ("maneos", "cliente_id", "INTEGER"),
             ("maneos", "observacion", "TEXT"),
