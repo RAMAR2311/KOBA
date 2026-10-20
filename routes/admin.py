@@ -74,10 +74,15 @@ def eliminar_vendedor(id):
 def dashboard():
     # Se obtienen métricas clave para que el administrador tenga un resumen rápido de las operaciones del negocio
     total_productos = Product.query.filter_by(tipo_inventario='tienda').count()
-    from sqlalchemy import func, select
+    from sqlalchemy import func, select, or_, and_
     q_sub = select(func.sum(ProductVariant.cantidad_stock)).where(ProductVariant.product_id == Product.id).scalar_subquery()
     effective_stock = func.coalesce(q_sub, Product.cantidad_stock)
-    productos_bajo_stock = Product.query.filter_by(tipo_inventario='tienda').filter(effective_stock <= 10).count()
+    filtro_urgencias = or_(
+        and_(~Product.variantes.any(), Product.cantidad_stock <= 10),
+        Product.variantes.any(ProductVariant.cantidad_stock <= 3),
+        and_(Product.variantes.any(), effective_stock <= 10)
+    )
+    productos_bajo_stock = Product.query.filter_by(tipo_inventario='tienda').filter(filtro_urgencias).distinct().count()
     maneos_activos = Maneo.query.filter_by(estado='PENDIENTE').count()
     
     # Se filtran las ventas por el mes/año seleccionado o el actual por defecto

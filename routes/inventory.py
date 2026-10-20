@@ -32,10 +32,15 @@ def index():
         )
 
     if filtro == 'bajo_stock':
-        from sqlalchemy import func, select
+        from sqlalchemy import func, select, or_, and_
         q_sub = select(func.sum(ProductVariant.cantidad_stock)).where(ProductVariant.product_id == Product.id).scalar_subquery()
         effective_stock = func.coalesce(q_sub, Product.cantidad_stock)
-        base_query = base_query.filter(effective_stock <= 10)
+        filtro_urgencias = or_(
+            and_(~Product.variantes.any(), Product.cantidad_stock <= 10),
+            Product.variantes.any(ProductVariant.cantidad_stock <= 3),
+            and_(Product.variantes.any(), effective_stock <= 10)
+        )
+        base_query = base_query.filter(filtro_urgencias).distinct()
 
     # Paginación del listado principal
     paginacion = base_query.order_by(Product.nombre).paginate(

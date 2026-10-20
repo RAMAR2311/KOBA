@@ -162,7 +162,7 @@
             {% if filtro == 'bajo_stock' %}
             <div class="d-inline-flex align-items-center bg-danger bg-opacity-10 border border-danger text-danger rounded-pill px-3 py-1 me-2 mb-1 shadow-sm">
                 <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                <span class="small fw-bold me-2">Stock Crítico (≤ 10 uds)</span>
+                <span class="small fw-bold me-2">Stock Crítico (≤ 10 uds o Subcat. ≤ 3 uds)</span>
                 <a href="{{ url_for('inventory_bp.index', q=q if q else None) }}" class="text-danger hover-opacity text-decoration-none" title="Ver todo el inventario">
                     <i class="fa-solid fa-circle-xmark"></i>
                 </a>
@@ -221,8 +221,30 @@
                     <td class="text-center">
                         {% if p.total_stock <= 3 %}
                             <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ p.total_stock }} (Stock Bajo)</span>
+                        {% elif p.total_stock <= 10 %}
+                            <span class="badge bg-warning text-dark border border-warning rounded-pill px-3 py-2 fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> {{ p.total_stock }} unidades</span>
                         {% else %}
                             <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">{{ p.total_stock }} unidades</span>
+                        {% endif %}
+
+                        {% if p.variantes %}
+                            {% set vars_criticas = [] %}
+                            {% for v in p.variantes %}
+                                {% if v.cantidad_stock <= 3 %}
+                                    {% set _ = vars_criticas.append(v) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if vars_criticas|length > 0 %}
+                                <div class="mt-1">
+                                    <button class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2 py-1 text-decoration-none fw-bold" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#collapseVariantes{{ p.id }}" 
+                                            title="Click para ver subcategorías agotadas o con bajo stock">
+                                        <i class="fa-solid fa-circle-exclamation me-1"></i>{{ vars_criticas|length }} subcat. crítica{{ 's' if vars_criticas|length > 1 else '' }}
+                                    </button>
+                                </div>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td class="text-end fw-bold" style="color: var(--brand-primary);">
@@ -303,13 +325,22 @@
                                 </thead>
                                 <tbody>
                                     {% for v in p.variantes %}
-                                    <tr class="align-middle">
-                                        <td class="ps-4 fw-semibold text-brand-black" style="font-size: 0.95rem;">{{ v.nombre_variante }}</td>
+                                    <tr class="align-middle {% if v.cantidad_stock <= 3 %}bg-danger bg-opacity-10{% endif %}">
+                                        <td class="ps-4 fw-semibold text-brand-black" style="font-size: 0.95rem;">
+                                            {{ v.nombre_variante }}
+                                            {% if v.cantidad_stock == 0 %}
+                                                <span class="badge bg-dark rounded-pill ms-1" style="font-size: 0.68rem;">Agotado</span>
+                                            {% elif v.cantidad_stock <= 3 %}
+                                                <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.68rem;">Stock Crítico</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="text-center">
-                                            {% if v.cantidad_stock <= 3 %}
-                                                <span class="badge bg-danger rounded-pill">{{ v.cantidad_stock }}</span>
+                                            {% if v.cantidad_stock == 0 %}
+                                                <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">0</span>
+                                            {% elif v.cantidad_stock <= 3 %}
+                                                <span class="badge bg-danger rounded-pill px-3 py-1 fw-bold">{{ v.cantidad_stock }}</span>
                                             {% else %}
-                                                <span class="badge bg-secondary rounded-pill text-white">{{ v.cantidad_stock }}</span>
+                                                <span class="badge bg-secondary bg-opacity-25 text-dark border rounded-pill px-3 py-1 fw-semibold">{{ v.cantidad_stock }}</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-end text-muted">${{ (v.precio_costo or p.precio_costo)|cop }}</td>
@@ -330,7 +361,7 @@
                         <i class="fa-solid fa-box-open fs-1 mb-3 text-brand-pink"></i>
                         <p class="mb-0">
                             {% if filtro == 'bajo_stock' %}
-                                No hay productos con alertas de stock crítico (≤ 10 uds) en este momento.
+                                No hay productos con alertas de stock crítico (≤ 10 uds o Subcategorías ≤ 3 uds) en este momento.
                                 <a href="{{ url_for('inventory_bp.index') }}" class="btn btn-sm btn-outline-primary rounded-pill ms-2">Ver todo el catálogo</a>
                             {% elif q %}
                                 No se encontraron productos coincidentes con "<strong>{{ q }}</strong>". 
