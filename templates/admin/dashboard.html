@@ -447,8 +447,11 @@
                     <span>Cuentas por pagar, compras y abonos</span>
                 </div>
             </div>
-            <div>
-                <a href="/proveedores" class="btn-card-dark">
+            <div class="d-flex flex-column gap-2 mt-3">
+                <button type="button" class="btn-card-koba-outline d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#modalAbonosProveedores">
+                    <i class="fa-regular fa-eye me-1"></i> Vista Previa ({{ conteo_abonos_prov }})
+                </button>
+                <a href="/proveedores" class="btn-card-dark text-center">
                     <i class="fa-solid fa-folder-open me-1" style="color: #06b6d4;"></i> Abrir Proveedores
                 </a>
             </div>
@@ -515,6 +518,88 @@
             </button>
           </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vista Previa Abonos a Proveedores en el Periodo -->
+<div class="modal fade" id="modalAbonosProveedores" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header border-0 bg-light py-3 px-4 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon-container" style="background-color: #ede9fe; color: #7c3aed; width: 40px; height: 40px; font-size: 1.1rem; border: 1px solid #ddd6fe;">
+                <i class="fa-solid fa-truck-fast"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-brand-dark mb-0 font-heading">Abonos a Proveedores</h5>
+                <small class="text-muted">Periodo: <strong class="text-dark">{{ nombre_mes }} {{ anio }}</strong> · Total: <strong class="text-success">${{ (abonos_proveedores)|cop }}</strong></small>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if lista_abonos_prov %}
+        <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+          <table class="table table-hover table-custom mb-0 align-middle">
+            <thead class="bg-light sticky-top">
+              <tr>
+                <th class="ps-4">FECHA Y HORA</th>
+                <th>PROVEEDOR / EMPRESA</th>
+                <th class="text-end">MONTO ABONADO</th>
+                <th>OBSERVACIÓN</th>
+                <th class="text-center pe-4">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pay in lista_abonos_prov %}
+              <tr>
+                <td class="ps-4 small text-muted">
+                  <div class="fw-bold text-brand-black">{{ pay.fecha_pago.strftime('%d/%m/%Y') }}</div>
+                  <div style="font-size: 0.75rem;">{{ pay.fecha_pago.strftime('%H:%M') }}</div>
+                </td>
+                <td>
+                  <div class="fw-bold text-brand-black">{{ pay.provider.nombre if pay.provider else 'Proveedor' }}</div>
+                  {% if pay.provider and pay.provider.empresa %}
+                    <small class="text-muted">{{ pay.provider.empresa }}</small>
+                  {% endif %}
+                </td>
+                <td class="text-end fw-bold text-success fs-6" style="font-family: 'Outfit', sans-serif;">
+                  ${{ (pay.monto_abonado)|cop }}
+                </td>
+                <td class="small text-muted">
+                  {{ pay.observacion or '—' }}
+                </td>
+                <td class="text-center pe-4">
+                  {% if pay.provider %}
+                    <a href="{{ url_for('providers_bp.detalle', id=pay.provider.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold shadow-sm" title="Ver cuenta del proveedor">
+                      <i class="fa-solid fa-folder-open me-1"></i> Ver Cuenta
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 px-3">
+          <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 56px; height: 56px;">
+            <i class="fa-solid fa-receipt fs-3 text-muted opacity-50"></i>
+          </div>
+          <p class="mb-1 fw-bold text-brand-black">No se registraron abonos a proveedores en {{ nombre_mes }} {{ anio }}</p>
+          <small class="text-muted">Los pagos registrados a facturas de proveedores durante este mes aparecerán aquí.</small>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-between align-items-center">
+        <a href="/proveedores" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-2 fw-bold">
+          <i class="fa-solid fa-list me-1"></i> Ir al Directorio de Proveedores
+        </a>
+        <button type="button" class="btn btn-sm btn-light rounded-pill px-4 py-2 fw-semibold" data-bs-dismiss="modal">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>

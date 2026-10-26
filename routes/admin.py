@@ -163,6 +163,9 @@ def dashboard():
     abonos_proveedores = db.session.query(func.sum(ProviderPayment.monto_abonado))\
         .filter(ProviderPayment.fecha_pago >= inicio_mes, ProviderPayment.fecha_pago <= fin_mes).scalar() or 0.0
     conteo_abonos_prov = ProviderPayment.query.filter(ProviderPayment.fecha_pago >= inicio_mes, ProviderPayment.fecha_pago <= fin_mes).count()
+    lista_abonos_prov = ProviderPayment.query.options(db.joinedload(ProviderPayment.provider))\
+        .filter(ProviderPayment.fecha_pago >= inicio_mes, ProviderPayment.fecha_pago <= fin_mes)\
+        .order_by(ProviderPayment.fecha_pago.desc()).all()
 
     meses = {
         1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
@@ -189,6 +192,7 @@ def dashboard():
                            ajustes_stock_periodo=ajustes_stock_periodo,
                            abonos_proveedores=abonos_proveedores,
                            conteo_abonos_prov=conteo_abonos_prov,
+                           lista_abonos_prov=lista_abonos_prov,
                            maneos_activos=maneos_activos,
                            mes=mes,
                            anio=anio,

@@ -388,6 +388,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
         </div>
 
         <!-- PESTAÑA 3: HISTORIAL DE ABONOS REALIZADOS -->
@@ -401,7 +402,7 @@
                             <th class="text-center">MÉTODO DE PAGO</th>
                             <th>REGISTRADO POR</th>
                             <th>OBSERVACIÓN / NOTAS</th>
-                            <th class="text-center pe-4">COMPROBANTE</th>
+                            <th class="text-center pe-4" style="min-width: 220px;">ACCIONES / COMPROBANTE</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -426,13 +427,105 @@
                                 {{ a.notas or '—' }}
                             </td>
                             <td class="text-center pe-4">
-                                {% if a.sale_id %}
-                                    <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=a.sale_id) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1 fw-bold shadow-sm" title="Imprimir Comprobante / Ticket">
-                                        <i class="fa-solid fa-receipt me-1"></i> Ticket
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted small">—</span>
-                                {% endif %}
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    {% if a.sale_id %}
+                                        <a href="{{ url_for('sales_bp.imprimir_ticket', sale_id=a.sale_id) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1 fw-bold shadow-sm" title="Imprimir Comprobante / Ticket">
+                                            <i class="fa-solid fa-receipt me-1 text-primary"></i> Ticket
+                                        </a>
+                                    {% endif %}
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditarAbono{{ a.id }}" title="Editar Notas o Método">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarAbono{{ a.id }}" title="Anular / Eliminar Abono">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Modal Editar Abono -->
+                                <div class="modal fade" id="modalEditarAbono{{ a.id }}" tabindex="-1" aria-hidden="true" style="text-align: left;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                                            <div class="modal-header border-0 bg-primary bg-opacity-10 py-3 px-4">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h5 class="modal-title fw-bold text-brand-black mb-0">Editar Abono #{{ a.id }}</h5>
+                                                        <small class="text-muted">Monto: ${{ '{:,.0f}'.format(a.monto) }} · {{ a.fecha_abono.strftime('%d/%m/%Y %H:%M') }}</small>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('clientes_bp.editar_abono', abono_id=a.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <div class="modal-body p-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold text-brand-black small text-uppercase">Método de Pago</label>
+                                                        <select name="metodo_pago" class="form-select bg-light border py-2">
+                                                            <option value="efectivo" {% if a.metodo_pago == 'efectivo' %}selected{% endif %}>💵 Efectivo directo a Caja</option>
+                                                            <option value="nequi" {% if a.metodo_pago == 'nequi' %}selected{% endif %}>📱 Nequi</option>
+                                                            <option value="daviplata" {% if a.metodo_pago == 'daviplata' %}selected{% endif %}>📱 Daviplata</option>
+                                                            <option value="bancolombia" {% if a.metodo_pago == 'bancolombia' %}selected{% endif %}>🏦 Bancolombia</option>
+                                                            <option value="tarjeta" {% if a.metodo_pago == 'tarjeta' %}selected{% endif %}>💳 Tarjeta / Datáfono</option>
+                                                            <option value="transferencia" {% if a.metodo_pago == 'transferencia' %}selected{% endif %}>🔄 Transferencia Bancaria</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold text-brand-black small text-uppercase">Observación / Notas</label>
+                                                        <textarea name="notas" rows="3" class="form-control bg-light border" placeholder="Notas de abono...">{{ a.notas or '' }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                                        <i class="fa-solid fa-save me-1"></i> Guardar Cambios
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Eliminar / Anular Abono -->
+                                <div class="modal fade" id="modalEliminarAbono{{ a.id }}" tabindex="-1" aria-hidden="true" style="text-align: left;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                                            <div class="modal-header border-0 bg-danger bg-opacity-10 py-3 px-4">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h5 class="modal-title fw-bold text-danger mb-0">¿Anular este Abono?</h5>
+                                                        <small class="text-muted">Abono #{{ a.id }} por ${{ '{:,.0f}'.format(a.monto) }}</small>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('clientes_bp.eliminar_abono', abono_id=a.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <div class="modal-body p-4">
+                                                    <div class="alert alert-warning border-0 small mb-3">
+                                                        <i class="fa-solid fa-circle-exclamation me-1"></i> <strong>Atención:</strong> Al anular este abono:
+                                                        <ul class="mb-0 mt-2 ps-3">
+                                                            <li>Se restará de los abonos aplicados y el saldo adeudado volverá a subir en <strong>+${{ '{:,.0f}'.format(a.monto) }}</strong>.</li>
+                                                            <li>Si algún maneo quedó liquidado por este abono, volverá a estado <strong>PENDIENTE</strong>.</li>
+                                                            <li>La venta registrada en caja será eliminada para mantener el arqueo exacto.</li>
+                                                        </ul>
+                                                    </div>
+                                                    <p class="mb-0 small text-brand-black">¿Estás seguro de que deseas anular y borrar este abono definitivamente?</p>
+                                                </div>
+                                                <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-end gap-2">
+                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
+                                                        <i class="fa-solid fa-trash me-1"></i> Sí, Anular y Borrar Abono
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -1536,6 +1629,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     actualizarTextoBotonAbono();
                 }
             });
+        }
+    }
+
+    // Activar pestaña según URL hash si viene de redirect (ej: #tab-abonos)
+    const hash = window.location.hash;
+    if (hash) {
+        const triggerEl = document.querySelector(`button[data-bs-target="${hash}"]`);
+        if (triggerEl) {
+            const tabInst = bootstrap.Tab.getOrCreateInstance(triggerEl);
+            tabInst.show();
         }
     }
 });

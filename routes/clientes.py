@@ -587,6 +587,90 @@ def registrar_abono(id):
 
     if request.form.get('origen') == 'directorio':
         return redirect(url_for('clientes_bp.index'))
-    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id))
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente.id, _anchor='tab-abonos'))
+
+@clientes_bp.route('/abono/<int:abono_id>/editar', methods=['POST'])
+@login_required
+def editar_abono(abono_id):
+    """Permite editar notas y método de pago de un abono existente."""
+    abono = AbonoCliente.query.get_or_404(abono_id)
+    cliente_id = abono.cliente_id
+
+    try:
+        nuevo_metodo = request.form.get('metodo_pago', abono.metodo_pago).strip()
+        nuevas_notas = request.form.get('notas', '').strip()
+
+        abono.metodo_pago = nuevo_metodo
+        abono.notas = nuevas_notas if nuevas_notas else None
+
+        # Si el abono tiene una venta asociada en caja, actualizar su método de pago
+        if abono.sale_id and abono.venta:
+            abono.venta.metodo_pago = nuevo_metodo
+            if abono.venta.pagos and len(abono.venta.pagos) == 1:
+                abono.venta.pagos[0].metodo_pago = nuevo_metodo
+
+        db.session.commit()
+        flash('Abono actualizado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al editar el abono: {str(e)}', 'danger')
+
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_id, _anchor='tab-abonos'))
+
+@clientes_bp.route('/abono/<int:abono_id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_abono(abono_id):
+    """Revierte y elimina un abono, restaurando los saldos pendientes de los maneos y limpiando la venta de caja."""
+    abono = AbonoCliente.query.get_or_404(abono_id)
+    cliente = abono.cliente
+    cliente_id = abono.cliente_id
+    monto_a_revertir = Decimal(str(abono.monto))
+
+    try:
+        # Revertir el dinero aplicado a los maneos del cliente
+        # Ordenamos de más reciente a más antiguo para deshacer en orden inverso
+        maneos_cliente = sorted(cliente.maneos, key=lambda m: m.fecha_prestamo or obtener_hora_bogota(), reverse=True)
+        monto_restante = monto_a_revertir
+
+        for m in maneos_cliente:
+            if monto_restante <= Decimal('0'):
+                break
+            abono_actual = Decimal(str(m.abono_acumulado or 0))
+            if abono_actual <= Decimal('0'):
+                continue
+
+            if monto_restante >= abono_actual:
+                monto_restante -= abono_actual
+                m.abono_acumulado = Decimal('0')
+                if m.estado == 'FACTURADO':
+                    m.estado = 'PENDIENTE'
+                    m.fecha_resolucion = None
+            else:
+                m.abono_acumulado = abono_actual - monto_restante
+                monto_restante = Decimal('0')
+                if m.estado == 'FACTURADO':
+                    m.estado = 'PENDIENTE'
+                    m.fecha_resolucion = None
+
+        # Si tiene venta asociada en caja, eliminarla para mantener la caja cuadrada
+        if abono.sale_id and abono.venta:
+            venta = abono.venta
+            for detalle in venta.detalles:
+                db.session.delete(detalle)
+            for pago in venta.pagos:
+                db.session.delete(pago)
+            db.session.delete(venta)
+
+        # Eliminar el registro del abono
+        db.session.delete(abono)
+        db.session.commit()
+
+        flash(f'El abono de ${monto_a_revertir:,.0f} fue eliminado y su valor reintegrado al saldo pendiente del cliente.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el abono: {str(e)}', 'danger')
+
+    return redirect(url_for('clientes_bp.estado_cuenta', id=cliente_id, _anchor='tab-abonos'))
+
 
 
