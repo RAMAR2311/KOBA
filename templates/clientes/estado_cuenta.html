@@ -33,6 +33,8 @@
                     <span class="text-muted">·</span>
                 {% endif %}
                 <span class="text-muted"><i class="fa-regular fa-calendar text-muted me-1"></i>Registrado el {{ cliente.fecha_registro.strftime('%d/%m/%Y') }}</span>
+                <span class="text-muted">·</span>
+                <span class="text-muted"><i class="fa-solid fa-calendar-check text-primary me-1"></i>Fecha Estado de Cuenta: <strong>{{ fecha_actual.strftime('%d/%m/%Y') if fecha_actual else '' }}</strong></span>
             </p>
         </div>
     </div>
@@ -46,6 +48,10 @@
         <button type="button" class="btn btn-outline-success rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" id="btnCompartirWhatsApp">
             <i class="fa-brands fa-whatsapp fs-5"></i>
             <span>Enviar Estado</span>
+        </button>
+        <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" id="btnCopiarTexto" title="Copiar texto del Estado de Cuenta">
+            <i class="fa-solid fa-copy"></i>
+            <span id="btnCopiarTextoLabel">Copiar Texto</span>
         </button>
         <button type="button" class="btn btn-outline-dark rounded-pill px-3 fw-bold shadow-sm d-flex align-items-center gap-1" onclick="window.print()">
             <i class="fa-solid fa-print"></i>
@@ -548,36 +554,46 @@
     </div>
 </div>
 
-<!-- Script para armar y enviar mensaje limpio por WhatsApp -->
+<!-- Script para armar, copiar y enviar mensaje limpio por WhatsApp -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function generarTextoEstadoCuenta() {
+        const nombre = {{ cliente.nombre_o_razon_social|tojson }};
+        const saldo = {{ saldo_pendiente }};
+        const unidades = {{ unidades_pendientes }};
+        const fechaGeneral = {{ (fecha_actual.strftime('%d/%m/%Y') if fecha_actual else '')|tojson }} || new Date().toLocaleDateString('es-CO');
+
+        let texto = `*ESTADO DE CUENTA - KOBA*\n`;
+        texto += `Cliente / Local: *${nombre}*\n`;
+        texto += `Fecha: ${fechaGeneral}\n`;
+        texto += `--------------------------------\n`;
+
+        {% if maneos_activos %}
+            texto += `*PRODUCTOS PENDIENTES EN MANEO:*\n`;
+            {% for m in maneos_activos %}
+                {% set f_prestamo = m.fecha_prestamo.strftime('%d/%m/%Y') if m.fecha_prestamo else 'S/F' %}
+                {% if m.abono_calculado > 0 %}
+                    texto += `• [{{ f_prestamo }}] {{ m.cantidad }}x {{ m.producto.nombre }}{% if m.variante %} ({{ m.variante.nombre_variante }}){% endif %} - ${{ '{:,.0f}'.format(m.saldo_pendiente_calculado) }} (Abono: ${{ '{:,.0f}'.format(m.abono_calculado) }})\n`;
+                {% else %}
+                    texto += `• [{{ f_prestamo }}] {{ m.cantidad }}x {{ m.producto.nombre }}{% if m.variante %} ({{ m.variante.nombre_variante }}){% endif %} - ${{ '{:,.0f}'.format(m.subtotal_calculado) }}\n`;
+                {% endif %}
+            {% endfor %}
+            texto += `--------------------------------\n`;
+            texto += `*TOTAL PENDIENTE POR PAGAR:*\n$${Number(saldo).toLocaleString('es-CO')}\n`;
+            texto += `Total Unidades: ${unidades}\n`;
+        {% else %}
+            texto += `Actualmente estás *AL DÍA* sin productos ni dinero pendiente.\n`;
+        {% endif %}
+
+        texto += `\n¡Gracias por tu colaboración comercial!`;
+        return texto;
+    }
+
     const btnWhatsApp = document.getElementById('btnCompartirWhatsApp');
     if (btnWhatsApp) {
         btnWhatsApp.addEventListener('click', function() {
-            const nombre = {{ cliente.nombre_o_razon_social|tojson }};
-            const saldo = {{ saldo_pendiente }};
-            const unidades = {{ unidades_pendientes }};
             const tel = {{ (cliente.telefono or '')|tojson }};
-
-            let texto = `*ESTADO DE CUENTA - KOBA*\n`;
-            texto += `Cliente / Local: *${nombre}*\n`;
-            texto += `Fecha: ${new Date().toLocaleDateString('es-CO')}\n`;
-            texto += `--------------------------------\n`;
-
-            {% if maneos_activos %}
-                texto += `*PRODUCTOS PENDIENTES EN MANEO:*\n`;
-                {% for m in maneos_activos %}
-                    texto += `• {{ m.cantidad }}x {{ m.producto.nombre }}{% if m.variante %} ({{ m.variante.nombre_variante }}){% endif %} - ${{ '{:,.0f}'.format(m.subtotal_calculado) }}\n`;
-                {% endfor %}
-                texto += `--------------------------------\n`;
-                texto += `*TOTAL PENDIENTE POR PAGAR:* $${Number(saldo).toLocaleString('es-CO')}\n`;
-                texto += `Total Unidades: ${unidades}\n`;
-            {% else %}
-                texto += `Actualmente estás *AL DÍA* sin productos ni dinero pendiente.\n`;
-            {% endif %}
-
-            texto += `\n¡Gracias por tu colaboración comercial!`;
-
+            const texto = generarTextoEstadoCuenta();
             const encoded = encodeURIComponent(texto);
             let url = '';
             if (tel && tel.trim().length >= 7) {
@@ -587,6 +603,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 url = `https://api.whatsapp.com/send?text=${encoded}`;
             }
             window.open(url, '_blank');
+        });
+    }
+
+    const btnCopiar = document.getElementById('btnCopiarTexto');
+    if (btnCopiar) {
+        btnCopiar.addEventListener('click', function() {
+            const texto = generarTextoEstadoCuenta();
+            navigator.clipboard.writeText(texto).then(function() {
+                const label = document.getElementById('btnCopiarTextoLabel');
+                const prevHtml = label.innerHTML;
+                label.innerHTML = "¡Copiado!";
+                btnCopiar.classList.remove('btn-outline-primary');
+                btnCopiar.classList.add('btn-primary');
+                setTimeout(function() {
+                    label.innerHTML = prevHtml;
+                    btnCopiar.classList.remove('btn-primary');
+                    btnCopiar.classList.add('btn-outline-primary');
+                }, 2000);
+            }).catch(function(err) {
+                alert("No se pudo copiar automáticamente. Puedes seleccionar el texto.");
+            });
         });
     }
 });

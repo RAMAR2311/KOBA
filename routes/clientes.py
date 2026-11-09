@@ -172,7 +172,8 @@ def estado_cuenta(id):
         unidades_pendientes=unidades_pendientes,
         total_prestado=total_prestado,
         total_cobrado=total_cobrado,
-        total_devuelto=total_devuelto
+        total_devuelto=total_devuelto,
+        fecha_actual=obtener_hora_bogota()
     )
 
 @clientes_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
